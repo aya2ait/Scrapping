@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-config
+  namespace: ecommerce-intelligence
+data:
+  scraping-config.json: |
+    {
+      "max_retries": 3,
+      "timeout_seconds": 30,
+      "delay_between_requests": 1.5,
+      "selenium_options": {
+        "headless": true,
+        "window_size": "1920,1080"
+      },
+      "max_products_per_store": 1000
+    }
+  analysis-config.json: |
+    {
+      "k": 10,
+      "criteria": {
+        "weights": {
+          "price": 0.3,
+          "availability": 0.25,
+          "stock": 0.2,
+          "vendor_popularity": 0.15,
+          "ratings": 0.1
+        }
+      }
+    }
+  export-config.json: |
+    {
+      "include_columns": [
+        "store_domain", 
+        "title", 
+        "price", 
+        "score", 
+        "vendor", 
+        "available"
+      ],
+      "format_options": {
+        "date_format": "%Y-%m-%d",
+        "float_precision": 2
+      }
+    }

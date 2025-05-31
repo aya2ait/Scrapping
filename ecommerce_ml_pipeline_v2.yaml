@@ -1,0 +1,421 @@
+# PIPELINE DEFINITION
+# Name: ecommerce-ml-pipeline-v2
+# Description: Pipeline ML e-commerce - Version KFP 2.0.0
+# Inputs:
+#    ml_config: str [Default: '{}']
+#    mongodb_config: str [Default: '{}']
+#    scraping_config: str [Default: '{}']
+#    stores_config: str [Default: '[]']
+#    validation_config: str [Default: '{}']
+components:
+  comp-data-extraction-component:
+    executorLabel: exec-data-extraction-component
+    inputDefinitions:
+      parameters:
+        scraping_config:
+          parameterType: STRING
+        stores_config:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        output_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        stores_processed:
+          parameterType: NUMBER_INTEGER
+        total_products:
+          parameterType: NUMBER_INTEGER
+  comp-data-storage-component:
+    executorLabel: exec-data-storage-component
+    inputDefinitions:
+      artifacts:
+        extraction_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        mongodb_config:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        quality_ratio:
+          parameterType: NUMBER_DOUBLE
+        stored_products:
+          parameterType: NUMBER_INTEGER
+  comp-ml-scoring-component:
+    executorLabel: exec-ml-scoring-component
+    inputDefinitions:
+      parameters:
+        ml_config:
+          parameterType: STRING
+        stored_products:
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+        scored_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        model_accuracy:
+          parameterType: NUMBER_DOUBLE
+        top_k_count:
+          parameterType: NUMBER_INTEGER
+  comp-validation-component:
+    executorLabel: exec-validation-component
+    inputDefinitions:
+      artifacts:
+        scored_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        validation_config:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        validation_report:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+      parameters:
+        quality_score:
+          parameterType: NUMBER_DOUBLE
+        recommendations_count:
+          parameterType: NUMBER_INTEGER
+deploymentSpec:
+  executors:
+    exec-data-extraction-component:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - data_extraction_component
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'pandas==1.5.3'\
+          \ 'numpy==1.24.3' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef data_extraction_component(\n    stores_config: str,\n    scraping_config:\
+          \ str,\n    output_data: Output[Dataset]\n) -> NamedTuple(\"ExtractionOutputs\"\
+          , [(\"total_products\", int), (\"stores_processed\", int)]):\n    \"\"\"\
+          \n    Composant d'extraction de donn\xE9es A2A\n    Utilise votre syst\xE8\
+          me UnifiedExtractionPipeline existant\n    \"\"\"\n    import json\n   \
+          \ import pandas as pd\n    from collections import namedtuple\n    import\
+          \ os\n\n    # Simulation de votre pipeline d'extraction existant\n    print(\"\
+          \U0001F680 D\xE9marrage de l'extraction A2A...\")\n\n    # Parsing des configurations\n\
+          \    stores = json.loads(stores_config)\n    scraping_params = json.loads(scraping_config)\n\
+          \n    # Simulation de l'extraction (remplacer par votre code r\xE9el)\n\
+          \    extracted_data = []\n    total_products = 0\n\n    for store in stores:\n\
+          \        print(f\"\U0001F4E6 Extraction depuis {store['domain']} ({store['platform']})...\"\
+          )\n\n        # Ici vous appelleriez votre agent A2A appropri\xE9\n     \
+          \   if store['platform'] == 'shopify':\n            products_count = 150\
+          \  # Simulation\n        else:\n            products_count = 80   # Simulation\n\
+          \n        total_products += products_count\n\n        # Donn\xE9es simul\xE9\
+          es pour le pipeline\n        for i in range(products_count):\n         \
+          \   extracted_data.append({\n                'store_domain': store['domain'],\n\
+          \                'platform': store['platform'],\n                'title':\
+          \ f\"Product {i} from {store['domain']}\",\n                'price': 29.99\
+          \ + (i % 100),\n                'available': i % 4 != 0,\n             \
+          \   'stock_quantity': i % 50,\n                'vendor': f\"Vendor_{i %\
+          \ 10}\"\n            })\n\n    # Sauvegarde des donn\xE9es extraites\n \
+          \   df = pd.DataFrame(extracted_data)\n    df.to_csv(output_data.path, index=False)\n\
+          \n    print(f\"\u2705 Extraction termin\xE9e: {total_products} produits\
+          \ de {len(stores)} magasins\")\n\n    ExtractionOutputs = namedtuple('ExtractionOutputs',\
+          \ ['total_products', 'stores_processed'])\n    return ExtractionOutputs(total_products,\
+          \ len(stores))\n\n"
+        image: python:3.9-slim
+    exec-data-storage-component:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - data_storage_component
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'pandas==1.5.3'\
+          \ && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef data_storage_component(\n    extraction_data: Input[Dataset],\n\
+          \    mongodb_config: str\n) -> NamedTuple(\"StorageOutputs\", [(\"stored_products\"\
+          , int), (\"quality_ratio\", float)]):\n    \"\"\"\n    Composant de stockage\
+          \ MongoDB\n    Utilise votre syst\xE8me ProductsDB existant\n    \"\"\"\n\
+          \    import pandas as pd\n    import json\n    from collections import namedtuple\n\
+          \n    print(\"\U0001F4BE D\xE9marrage du stockage MongoDB...\")\n\n    #\
+          \ Chargement des donn\xE9es extraites\n    df = pd.read_csv(extraction_data.path)\n\
+          \    config = json.loads(mongodb_config)\n\n    print(f\"\U0001F4CA Traitement\
+          \ de {len(df)} produits...\")\n\n    # Simulation du stockage (remplacer\
+          \ par votre ProductsDB)\n    # db = ProductsDB(config['connection_string'])\n\
+          \    # db.insert_products_batch(df.to_dict('records'))\n\n    # Nettoyage\
+          \ et validation des donn\xE9es\n    df_clean = df.dropna(subset=['title',\
+          \ 'price'])\n    df_clean = df_clean[df_clean['price'] > 0]\n\n    stored_products\
+          \ = len(df_clean)\n    quality_ratio = stored_products / len(df) if len(df)\
+          \ > 0 else 0\n\n    print(f\"\u2705 Stockage termin\xE9: {stored_products}\
+          \ produits stock\xE9s\")\n\n    StorageOutputs = namedtuple('StorageOutputs',\
+          \ ['stored_products', 'quality_ratio'])\n    return StorageOutputs(stored_products,\
+          \ quality_ratio)\n\n"
+        image: python:3.9-slim
+    exec-ml-scoring-component:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - ml_scoring_component
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'pandas==1.5.3'\
+          \ 'numpy==1.24.3' 'scikit-learn==1.2.2' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef ml_scoring_component(\n    stored_products: int,\n    ml_config:\
+          \ str,\n    scored_data: Output[Dataset],\n    model: Output[Model]\n) ->\
+          \ NamedTuple(\"MLOutputs\", [(\"model_accuracy\", float), (\"top_k_count\"\
+          , int)]):\n    \"\"\"\n    Composant de scoring ML\n    Utilise votre ProductAnalyzer\
+          \ existant\n    \"\"\"\n    import json\n    import pandas as pd\n    import\
+          \ numpy as np\n    from sklearn.ensemble import RandomForestRegressor\n\
+          \    from sklearn.model_selection import train_test_split\n    from sklearn.metrics\
+          \ import mean_squared_error\n    import pickle\n    from collections import\
+          \ namedtuple\n\n    print(\"\U0001F9E0 D\xE9marrage du scoring ML...\")\n\
+          \n    # Configuration ML\n    config = json.loads(ml_config)\n\n    # Simulation\
+          \ de donn\xE9es depuis MongoDB (remplacer par votre ProductAnalyzer)\n \
+          \   np.random.seed(42)\n    n_products = min(int(stored_products), 1000)\
+          \  # Conversion explicite en int\n\n    # G\xE9n\xE9ration de donn\xE9es\
+          \ simul\xE9es\n    data = {\n        'price': np.random.uniform(10, 500,\
+          \ n_products),\n        'stock_quantity': np.random.randint(0, 100, n_products),\n\
+          \        'available': np.random.choice([True, False], n_products, p=[0.8,\
+          \ 0.2]),\n        'vendor_popularity': np.random.uniform(0, 1, n_products),\n\
+          \        'platform_score': np.random.uniform(0.5, 1, n_products)\n    }\n\
+          \n    df = pd.DataFrame(data)\n\n    # Feature engineering\n    df['price_score']\
+          \ = 1 / (1 + df['price'] / 100)\n    df['availability_score'] = df['available'].astype(float)\n\
+          \    df['stock_score'] = np.minimum(df['stock_quantity'] / 50, 1)\n\n  \
+          \  # Calcul du score synth\xE9tique (cible)\n    weights = config.get('weights',\
+          \ {\n        'price': 0.3, 'availability': 0.25, 'stock': 0.2, \n      \
+          \  'vendor_popularity': 0.15, 'platform': 0.1\n    })\n\n    df['synthetic_score']\
+          \ = (\n        weights['price'] * df['price_score'] +\n        weights['availability']\
+          \ * df['availability_score'] +\n        weights['stock'] * df['stock_score']\
+          \ +\n        weights['vendor_popularity'] * df['vendor_popularity'] +\n\
+          \        weights['platform'] * df['platform_score']\n    )\n\n    # Pr\xE9\
+          paration des features pour ML\n    X = df[['price', 'stock_quantity', 'vendor_popularity',\
+          \ 'platform_score']].copy()\n    X['available'] = df['available'].astype(int)\n\
+          \    y = df['synthetic_score']\n\n    # Split train/test\n    X_train, X_test,\
+          \ y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\
+          \n    # Entra\xEEnement du mod\xE8le\n    model_type = config.get('model_type',\
+          \ 'random_forest')\n    rf_model = RandomForestRegressor(n_estimators=100,\
+          \ random_state=42)\n\n    print(f\"\U0001F3AF Entra\xEEnement du mod\xE8\
+          le {model_type}...\")\n    rf_model.fit(X_train, y_train)\n\n    # \xC9\
+          valuation\n    y_pred = rf_model.predict(X_test)\n    mse = mean_squared_error(y_test,\
+          \ y_pred)\n    accuracy = max(0, 1 - mse)\n\n    # Pr\xE9diction sur l'ensemble\
+          \ complet\n    df['ml_score'] = rf_model.predict(X)\n    df['final_score']\
+          \ = (df['synthetic_score'] + df['ml_score']) / 2\n\n    # S\xE9lection des\
+          \ Top-K\n    k = config.get('top_k', 50)\n    top_products = df.nlargest(k,\
+          \ 'final_score')\n\n    # Sauvegarde des r\xE9sultats\n    top_products.to_csv(scored_data.path,\
+          \ index=False)\n\n    # Sauvegarde du mod\xE8le\n    with open(model.path,\
+          \ 'wb') as f:\n        pickle.dump(rf_model, f)\n\n    print(f\"\u2705 Scoring\
+          \ ML termin\xE9: Top-{k} produits s\xE9lectionn\xE9s\")\n    print(f\"\U0001F4C8\
+          \ Pr\xE9cision du mod\xE8le: {accuracy:.3f}\")\n\n    MLOutputs = namedtuple('MLOutputs',\
+          \ ['model_accuracy', 'top_k_count'])\n    return MLOutputs(float(accuracy),\
+          \ k)\n\n"
+        image: python:3.9-slim
+    exec-validation-component:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - validation_component
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'pandas==1.5.3'\
+          \ && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef validation_component(\n    scored_data: Input[Dataset],\n   \
+          \ validation_config: str,\n    validation_report: Output[Metrics]\n) ->\
+          \ NamedTuple(\"ValidationOutputs\", [(\"quality_score\", float), (\"recommendations_count\"\
+          , int)]):\n    \"\"\"\n    Composant de validation et contr\xF4le qualit\xE9\
+          \n    \"\"\"\n    import pandas as pd\n    import json\n    from collections\
+          \ import namedtuple\n\n    print(\"\U0001F50D D\xE9marrage de la validation...\"\
+          )\n\n    # Chargement des donn\xE9es scor\xE9es\n    df = pd.read_csv(scored_data.path)\n\
+          \    config = json.loads(validation_config)\n\n    # M\xE9triques de qualit\xE9\
+          \n    quality_checks = {\n        'data_completeness': (df.isnull().sum().sum()\
+          \ == 0),\n        'price_validity': (df['price'] > 0).all(),\n        'score_distribution':\
+          \ df['final_score'].std() > 0.1,\n        'top_products_available': (df.head(10)['available'].astype(bool)).mean()\
+          \ > 0.7\n    }\n\n    quality_score = sum(quality_checks.values()) / len(quality_checks)\n\
+          \n    # G\xE9n\xE9ration du rapport\n    report = {\n        'quality_score':\
+          \ quality_score,\n        'total_products_analyzed': len(df),\n        'top_products_count':\
+          \ config.get('top_k', 50),\n        'average_score': float(df['final_score'].mean()),\n\
+          \        'quality_checks': quality_checks,\n        'recommendations': []\n\
+          \    }\n\n    # Recommandations bas\xE9es sur l'analyse\n    if quality_score\
+          \ < 0.8:\n        report['recommendations'].append(\"Am\xE9liorer la qualit\xE9\
+          \ des donn\xE9es d'entr\xE9e\")\n    if df['final_score'].std() < 0.1:\n\
+          \        report['recommendations'].append(\"Diversifier les crit\xE8res\
+          \ de scoring\")\n\n    # Sauvegarde du rapport comme m\xE9triques\n    with\
+          \ open(validation_report.path, 'w') as f:\n        json.dump(report, f,\
+          \ indent=2)\n\n    print(f\"\u2705 Validation termin\xE9e - Score qualit\xE9\
+          : {quality_score:.2f}\")\n\n    ValidationOutputs = namedtuple('ValidationOutputs',\
+          \ ['quality_score', 'recommendations_count'])\n    return ValidationOutputs(quality_score,\
+          \ len(report['recommendations']))\n\n"
+        image: python:3.9-slim
+pipelineInfo:
+  description: Pipeline ML e-commerce - Version KFP 2.0.0
+  name: ecommerce-ml-pipeline-v2
+root:
+  dag:
+    tasks:
+      data-extraction-component:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-data-extraction-component
+        inputs:
+          parameters:
+            scraping_config:
+              componentInputParameter: scraping_config
+            stores_config:
+              componentInputParameter: stores_config
+        taskInfo:
+          name: data-extraction-component
+      data-storage-component:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-data-storage-component
+        dependentTasks:
+        - data-extraction-component
+        inputs:
+          artifacts:
+            extraction_data:
+              taskOutputArtifact:
+                outputArtifactKey: output_data
+                producerTask: data-extraction-component
+          parameters:
+            mongodb_config:
+              componentInputParameter: mongodb_config
+        taskInfo:
+          name: data-storage-component
+      ml-scoring-component:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-ml-scoring-component
+        dependentTasks:
+        - data-storage-component
+        inputs:
+          parameters:
+            ml_config:
+              componentInputParameter: ml_config
+            stored_products:
+              taskOutputParameter:
+                outputParameterKey: stored_products
+                producerTask: data-storage-component
+        taskInfo:
+          name: ml-scoring-component
+      validation-component:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-validation-component
+        dependentTasks:
+        - ml-scoring-component
+        inputs:
+          artifacts:
+            scored_data:
+              taskOutputArtifact:
+                outputArtifactKey: scored_data
+                producerTask: ml-scoring-component
+          parameters:
+            validation_config:
+              componentInputParameter: validation_config
+        taskInfo:
+          name: validation-component
+  inputDefinitions:
+    parameters:
+      ml_config:
+        defaultValue: '{}'
+        isOptional: true
+        parameterType: STRING
+      mongodb_config:
+        defaultValue: '{}'
+        isOptional: true
+        parameterType: STRING
+      scraping_config:
+        defaultValue: '{}'
+        isOptional: true
+        parameterType: STRING
+      stores_config:
+        defaultValue: '[]'
+        isOptional: true
+        parameterType: STRING
+      validation_config:
+        defaultValue: '{}'
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.13.0

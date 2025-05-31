@@ -1,0 +1,812 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: ecommerce-intelligence-pipeline-v1-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22, pipelines.kubeflow.org/pipeline_compilation_time: '2025-05-30T23:04:35.698472',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "Pipeline for eCommerce
+      product intelligence (KFP v1.x)", "inputs": [{"default": "[]", "description":
+      "JSON string with store configurations", "name": "stores_config", "optional":
+      true, "type": "String"}, {"default": "{}", "description": "JSON string with
+      scraping parameters", "name": "scraping_config", "optional": true, "type": "String"},
+      {"default": "{\"connection_string\": \"mongodb://localhost:27017\", \"database\":
+      \"ecommerce_products\", \"collection\": \"products\"}", "description": "JSON
+      string with MongoDB connection details", "name": "mongodb_config", "optional":
+      true, "type": "String"}, {"default": "{\"k\": 10, \"criteria\": {\"weights\":
+      {\"price\": 0.3, \"availability\": 0.25, \"stock\": 0.2}}}", "description":
+      "JSON string with analysis parameters", "name": "analysis_config", "optional":
+      true, "type": "String"}, {"default": "{\"include_columns\": [\"store_domain\",
+      \"title\", \"price\", \"score\"]}", "description": "JSON string with export
+      parameters", "name": "export_config", "optional": true, "type": "String"}],
+      "name": "ecommerce-intelligence-pipeline-v1"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22}
+spec:
+  entrypoint: ecommerce-intelligence-pipeline-v1
+  templates:
+  - name: analysis-func
+    container:
+      args: [--mongodb-config, '{{inputs.parameters.mongodb_config}}', --analysis-config,
+        '{{inputs.parameters.analysis_config}}', '----output-paths', /tmp/outputs/output_data/data,
+        /tmp/outputs/analyzed_products/data, /tmp/outputs/top_k_count/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'pymongo' 'scikit-learn' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3
+        -m pip install --quiet --no-warn-script-location 'pandas' 'pymongo' 'scikit-learn'
+        --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def analysis_func(
+            mongodb_config,
+            analysis_config
+        ):
+            """
+            Component that analyzes products and finds the top-K best ones.
+
+            Args:
+                mongodb_config: JSON string with MongoDB connection details
+                analysis_config: JSON string with analysis parameters
+            Returns:
+                output_data: Path to the top products
+                analyzed_products: Number of products analyzed
+                top_k_count: Number of top products selected
+            """
+            import json
+            import pandas as pd
+            import logging
+            from pymongo import MongoClient
+            import os
+            from collections import namedtuple
+
+            # Configure logging
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            logger = logging.getLogger('analysis')
+
+            try:
+                # Parse configurations
+                mongo_config = json.loads(mongodb_config)
+                config = json.loads(analysis_config)
+
+                # Connect to MongoDB
+                client = MongoClient(mongo_config['connection_string'])
+                db = client[mongo_config['database']]
+                collection = db[mongo_config['collection']]
+
+                # Retrieve products
+                products = list(collection.find({}))
+                logger.info(f"Retrieved {len(products)} products for analysis")
+
+                # Import the analysis logic from topk_analyzer.py
+                # This would normally be a proper import, but for this example:
+                from topk_analyzer import ProductAnalyzer
+
+                # Initialize analyzer
+                analyzer = ProductAnalyzer(config)
+
+                # Analyze and get top products
+                top_products = analyzer.find_top_k(products)
+
+                # Save results
+                output_path = '/tmp/top_products.csv'
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                df = pd.DataFrame(top_products)
+                df.to_csv(output_path, index=False)
+
+                # Log metrics
+                logger.info(f"Identified top {len(top_products)} products")
+
+                Outputs = namedtuple('Outputs', ['output_data', 'analyzed_products', 'top_k_count'])
+                return Outputs(output_path, len(products), len(top_products))
+
+            except Exception as e:
+                logger.error(f"Error in analysis: {str(e)}")
+                raise
+
+        def _serialize_int(int_value: int) -> str:
+            if isinstance(int_value, str):
+                return int_value
+            if not isinstance(int_value, int):
+                raise TypeError('Value "{}" has type "{}" instead of int.'.format(
+                    str(int_value), str(type(int_value))))
+            return str(int_value)
+
+        def _serialize_str(str_value: str) -> str:
+            if not isinstance(str_value, str):
+                raise TypeError('Value "{}" has type "{}" instead of str.'.format(
+                    str(str_value), str(type(str_value))))
+            return str_value
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Analysis func', description='Component that analyzes products and finds the top-K best ones.')
+        _parser.add_argument("--mongodb-config", dest="mongodb_config", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--analysis-config", dest="analysis_config", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=3)
+        _parsed_args = vars(_parser.parse_args())
+        _output_files = _parsed_args.pop("_output_paths", [])
+
+        _outputs = analysis_func(**_parsed_args)
+
+        _output_serializers = [
+            _serialize_str,
+            _serialize_int,
+            _serialize_int,
+
+        ]
+
+        import os
+        for idx, output_file in enumerate(_output_files):
+            try:
+                os.makedirs(os.path.dirname(output_file))
+            except OSError:
+                pass
+            with open(output_file, 'w') as f:
+                f.write(_output_serializers[idx](_outputs[idx]))
+      image: python:3.9-slim
+    inputs:
+      parameters:
+      - {name: analysis_config}
+      - {name: mongodb_config}
+    outputs:
+      parameters:
+      - name: analysis-func-output_data
+        valueFrom: {path: /tmp/outputs/output_data/data}
+      artifacts:
+      - {name: analysis-func-analyzed_products, path: /tmp/outputs/analyzed_products/data}
+      - {name: analysis-func-output_data, path: /tmp/outputs/output_data/data}
+      - {name: analysis-func-top_k_count, path: /tmp/outputs/top_k_count/data}
+    metadata:
+      annotations: {pipelines.kubeflow.org/task_display_name: Product Analysis, pipelines.kubeflow.org/component_spec: '{"description":
+          "Component that analyzes products and finds the top-K best ones.", "implementation":
+          {"container": {"args": ["--mongodb-config", {"inputValue": "mongodb_config"},
+          "--analysis-config", {"inputValue": "analysis_config"}, "----output-paths",
+          {"outputPath": "output_data"}, {"outputPath": "analyzed_products"}, {"outputPath":
+          "top_k_count"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas'' ''pymongo''
+          ''scikit-learn'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install
+          --quiet --no-warn-script-location ''pandas'' ''pymongo'' ''scikit-learn''
+          --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def analysis_func(\n    mongodb_config,\n    analysis_config\n):\n    \"\"\"\n    Component
+          that analyzes products and finds the top-K best ones.\n\n    Args:\n        mongodb_config:
+          JSON string with MongoDB connection details\n        analysis_config: JSON
+          string with analysis parameters\n    Returns:\n        output_data: Path
+          to the top products\n        analyzed_products: Number of products analyzed\n        top_k_count:
+          Number of top products selected\n    \"\"\"\n    import json\n    import
+          pandas as pd\n    import logging\n    from pymongo import MongoClient\n    import
+          os\n    from collections import namedtuple\n\n    # Configure logging\n    logging.basicConfig(\n        level=logging.INFO,\n        format=''%(asctime)s
+          - %(name)s - %(levelname)s - %(message)s''\n    )\n    logger = logging.getLogger(''analysis'')\n\n    try:\n        #
+          Parse configurations\n        mongo_config = json.loads(mongodb_config)\n        config
+          = json.loads(analysis_config)\n\n        # Connect to MongoDB\n        client
+          = MongoClient(mongo_config[''connection_string''])\n        db = client[mongo_config[''database'']]\n        collection
+          = db[mongo_config[''collection'']]\n\n        # Retrieve products\n        products
+          = list(collection.find({}))\n        logger.info(f\"Retrieved {len(products)}
+          products for analysis\")\n\n        # Import the analysis logic from topk_analyzer.py\n        #
+          This would normally be a proper import, but for this example:\n        from
+          topk_analyzer import ProductAnalyzer\n\n        # Initialize analyzer\n        analyzer
+          = ProductAnalyzer(config)\n\n        # Analyze and get top products\n        top_products
+          = analyzer.find_top_k(products)\n\n        # Save results\n        output_path
+          = ''/tmp/top_products.csv''\n        os.makedirs(os.path.dirname(output_path),
+          exist_ok=True)\n        df = pd.DataFrame(top_products)\n        df.to_csv(output_path,
+          index=False)\n\n        # Log metrics\n        logger.info(f\"Identified
+          top {len(top_products)} products\")\n\n        Outputs = namedtuple(''Outputs'',
+          [''output_data'', ''analyzed_products'', ''top_k_count''])\n        return
+          Outputs(output_path, len(products), len(top_products))\n\n    except Exception
+          as e:\n        logger.error(f\"Error in analysis: {str(e)}\")\n        raise\n\ndef
+          _serialize_int(int_value: int) -> str:\n    if isinstance(int_value, str):\n        return
+          int_value\n    if not isinstance(int_value, int):\n        raise TypeError(''Value
+          \"{}\" has type \"{}\" instead of int.''.format(\n            str(int_value),
+          str(type(int_value))))\n    return str(int_value)\n\ndef _serialize_str(str_value:
+          str) -> str:\n    if not isinstance(str_value, str):\n        raise TypeError(''Value
+          \"{}\" has type \"{}\" instead of str.''.format(\n            str(str_value),
+          str(type(str_value))))\n    return str_value\n\nimport argparse\n_parser
+          = argparse.ArgumentParser(prog=''Analysis func'', description=''Component
+          that analyzes products and finds the top-K best ones.'')\n_parser.add_argument(\"--mongodb-config\",
+          dest=\"mongodb_config\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--analysis-config\",
+          dest=\"analysis_config\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\",
+          dest=\"_output_paths\", type=str, nargs=3)\n_parsed_args = vars(_parser.parse_args())\n_output_files
+          = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = analysis_func(**_parsed_args)\n\n_output_serializers
+          = [\n    _serialize_str,\n    _serialize_int,\n    _serialize_int,\n\n]\n\nimport
+          os\nfor idx, output_file in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n    except
+          OSError:\n        pass\n    with open(output_file, ''w'') as f:\n        f.write(_output_serializers[idx](_outputs[idx]))\n"],
+          "image": "python:3.9-slim"}}, "inputs": [{"description": "JSON string with
+          MongoDB connection details", "name": "mongodb_config", "type": "String"},
+          {"description": "JSON string with analysis parameters", "name": "analysis_config",
+          "type": "String"}], "name": "Analysis func", "outputs": [{"name": "output_data",
+          "type": "String"}, {"name": "analyzed_products", "type": "Integer"}, {"name":
+          "top_k_count", "type": "Integer"}]}', pipelines.kubeflow.org/component_ref: '{}',
+        pipelines.kubeflow.org/arguments.parameters: '{"analysis_config": "{{inputs.parameters.analysis_config}}",
+          "mongodb_config": "{{inputs.parameters.mongodb_config}}"}'}
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+  - name: data-collection-func
+    container:
+      args: [--stores-config, '{{inputs.parameters.stores_config}}', --scraping-config,
+        '{{inputs.parameters.scraping_config}}', '----output-paths', /tmp/outputs/output_data/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'selenium' 'requests' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3
+        -m pip install --quiet --no-warn-script-location 'pandas' 'selenium' 'requests'
+        --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def data_collection_func(
+            stores_config,
+            scraping_config
+        ):
+            """
+            Component that scrapes product data from eCommerce stores.
+
+            Args:
+                stores_config: JSON string with store configurations
+                scraping_config: JSON string with scraping parameters
+            Returns:
+                output_data: Path to the extracted products
+            """
+            import json
+            import pandas as pd
+            import sys
+            import logging
+            import os
+            from collections import namedtuple
+
+            # Configure logging
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            logger = logging.getLogger('data-collection')
+
+            try:
+                # Parse configurations
+                stores = json.loads(stores_config)
+                config = json.loads(scraping_config)
+
+                logger.info(f"Starting data collection for {len(stores)} stores")
+
+                # Import the scraping logic from pipeline.py
+                # This would normally be a proper import, but for this example:
+                from pipeline import DataExtractor
+
+                # Initialize extractor
+                extractor = DataExtractor(stores, config)
+
+                # Extract data
+                products = extractor.extract_all_stores()
+
+                # Save to output
+                output_path = '/tmp/extracted_products.csv'
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                df = pd.DataFrame(products)
+                df.to_csv(output_path, index=False)
+
+                logger.info(f"Extracted {len(products)} products and saved to {output_path}")
+
+                Outputs = namedtuple('Outputs', ['output_data'])
+                return Outputs(output_path)
+
+            except Exception as e:
+                logger.error(f"Error in data collection: {str(e)}")
+                raise
+
+        def _serialize_str(str_value: str) -> str:
+            if not isinstance(str_value, str):
+                raise TypeError('Value "{}" has type "{}" instead of str.'.format(
+                    str(str_value), str(type(str_value))))
+            return str_value
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Data collection func', description='Component that scrapes product data from eCommerce stores.')
+        _parser.add_argument("--stores-config", dest="stores_config", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--scraping-config", dest="scraping_config", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=1)
+        _parsed_args = vars(_parser.parse_args())
+        _output_files = _parsed_args.pop("_output_paths", [])
+
+        _outputs = data_collection_func(**_parsed_args)
+
+        _output_serializers = [
+            _serialize_str,
+
+        ]
+
+        import os
+        for idx, output_file in enumerate(_output_files):
+            try:
+                os.makedirs(os.path.dirname(output_file))
+            except OSError:
+                pass
+            with open(output_file, 'w') as f:
+                f.write(_output_serializers[idx](_outputs[idx]))
+      image: python:3.9-slim
+    inputs:
+      parameters:
+      - {name: scraping_config}
+      - {name: stores_config}
+    outputs:
+      parameters:
+      - name: data-collection-func-output_data
+        valueFrom: {path: /tmp/outputs/output_data/data}
+      artifacts:
+      - {name: data-collection-func-output_data, path: /tmp/outputs/output_data/data}
+    metadata:
+      annotations: {pipelines.kubeflow.org/task_display_name: Data Collection, pipelines.kubeflow.org/component_spec: '{"description":
+          "Component that scrapes product data from eCommerce stores.", "implementation":
+          {"container": {"args": ["--stores-config", {"inputValue": "stores_config"},
+          "--scraping-config", {"inputValue": "scraping_config"}, "----output-paths",
+          {"outputPath": "output_data"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas'' ''selenium''
+          ''requests'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet
+          --no-warn-script-location ''pandas'' ''selenium'' ''requests'' --user) &&
+          \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf \"%s\" \"$0\"
+          > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n", "def data_collection_func(\n    stores_config,\n    scraping_config\n):\n    \"\"\"\n    Component
+          that scrapes product data from eCommerce stores.\n\n    Args:\n        stores_config:
+          JSON string with store configurations\n        scraping_config: JSON string
+          with scraping parameters\n    Returns:\n        output_data: Path to the
+          extracted products\n    \"\"\"\n    import json\n    import pandas as pd\n    import
+          sys\n    import logging\n    import os\n    from collections import namedtuple\n\n    #
+          Configure logging\n    logging.basicConfig(\n        level=logging.INFO,\n        format=''%(asctime)s
+          - %(name)s - %(levelname)s - %(message)s''\n    )\n    logger = logging.getLogger(''data-collection'')\n\n    try:\n        #
+          Parse configurations\n        stores = json.loads(stores_config)\n        config
+          = json.loads(scraping_config)\n\n        logger.info(f\"Starting data collection
+          for {len(stores)} stores\")\n\n        # Import the scraping logic from
+          pipeline.py\n        # This would normally be a proper import, but for this
+          example:\n        from pipeline import DataExtractor\n\n        # Initialize
+          extractor\n        extractor = DataExtractor(stores, config)\n\n        #
+          Extract data\n        products = extractor.extract_all_stores()\n\n        #
+          Save to output\n        output_path = ''/tmp/extracted_products.csv''\n        os.makedirs(os.path.dirname(output_path),
+          exist_ok=True)\n        df = pd.DataFrame(products)\n        df.to_csv(output_path,
+          index=False)\n\n        logger.info(f\"Extracted {len(products)} products
+          and saved to {output_path}\")\n\n        Outputs = namedtuple(''Outputs'',
+          [''output_data''])\n        return Outputs(output_path)\n\n    except Exception
+          as e:\n        logger.error(f\"Error in data collection: {str(e)}\")\n        raise\n\ndef
+          _serialize_str(str_value: str) -> str:\n    if not isinstance(str_value,
+          str):\n        raise TypeError(''Value \"{}\" has type \"{}\" instead of
+          str.''.format(\n            str(str_value), str(type(str_value))))\n    return
+          str_value\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Data
+          collection func'', description=''Component that scrapes product data from
+          eCommerce stores.'')\n_parser.add_argument(\"--stores-config\", dest=\"stores_config\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--scraping-config\",
+          dest=\"scraping_config\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\",
+          dest=\"_output_paths\", type=str, nargs=1)\n_parsed_args = vars(_parser.parse_args())\n_output_files
+          = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = data_collection_func(**_parsed_args)\n\n_output_serializers
+          = [\n    _serialize_str,\n\n]\n\nimport os\nfor idx, output_file in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n    except
+          OSError:\n        pass\n    with open(output_file, ''w'') as f:\n        f.write(_output_serializers[idx](_outputs[idx]))\n"],
+          "image": "python:3.9-slim"}}, "inputs": [{"description": "JSON string with
+          store configurations", "name": "stores_config", "type": "String"}, {"description":
+          "JSON string with scraping parameters", "name": "scraping_config", "type":
+          "String"}], "name": "Data collection func", "outputs": [{"name": "output_data",
+          "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}', pipelines.kubeflow.org/arguments.parameters: '{"scraping_config":
+          "{{inputs.parameters.scraping_config}}", "stores_config": "{{inputs.parameters.stores_config}}"}'}
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+  - name: data-storage-func
+    container:
+      args: [--input-data-path, '{{inputs.parameters.data-collection-func-output_data}}',
+        --mongodb-config, '{{inputs.parameters.mongodb_config}}', '----output-paths',
+        /tmp/outputs/stored_products/data, /tmp/outputs/storage_success_rate/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'pymongo' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install
+        --quiet --no-warn-script-location 'pandas' 'pymongo' --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def data_storage_func(
+            input_data_path,
+            mongodb_config
+        ):
+            """
+            Component that stores product data in MongoDB.
+
+            Args:
+                input_data_path: Path to the extracted products data
+                mongodb_config: JSON string with MongoDB connection details
+            Returns:
+                stored_products: Number of products stored
+                storage_success_rate: Success rate of storage operation
+            """
+            import json
+            import pandas as pd
+            import logging
+            from pymongo import MongoClient
+            from collections import namedtuple
+
+            # Configure logging
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            logger = logging.getLogger('data-storage')
+
+            try:
+                # Parse configuration
+                config = json.loads(mongodb_config)
+
+                # Load data
+                df = pd.read_csv(input_data_path)
+                products = df.to_dict('records')
+
+                logger.info(f"Loaded {len(products)} products for storage")
+
+                # Connect to MongoDB
+                client = MongoClient(config['connection_string'])
+                db = client[config['database']]
+                collection = db[config['collection']]
+
+                # Store data with upsert
+                stored_count = 0
+                for product in products:
+                    result = collection.update_one(
+                        {"store_domain": product["store_domain"], "title": product["title"]},
+                        {"$set": product},
+                        upsert=True
+                    )
+                    if result.modified_count or result.upserted_id:
+                        stored_count += 1
+
+                # Log results
+                logger.info(f"Successfully stored {stored_count} products in MongoDB")
+
+                # Calculate metrics
+                storage_success_rate = stored_count / len(products) if products else 0
+
+                Outputs = namedtuple('Outputs', ['stored_products', 'storage_success_rate'])
+                return Outputs(stored_count, storage_success_rate)
+
+            except Exception as e:
+                logger.error(f"Error in data storage: {str(e)}")
+                raise
+
+        def _serialize_float(float_value: float) -> str:
+            if isinstance(float_value, str):
+                return float_value
+            if not isinstance(float_value, (float, int)):
+                raise TypeError('Value "{}" has type "{}" instead of float.'.format(
+                    str(float_value), str(type(float_value))))
+            return str(float_value)
+
+        def _serialize_int(int_value: int) -> str:
+            if isinstance(int_value, str):
+                return int_value
+            if not isinstance(int_value, int):
+                raise TypeError('Value "{}" has type "{}" instead of int.'.format(
+                    str(int_value), str(type(int_value))))
+            return str(int_value)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Data storage func', description='Component that stores product data in MongoDB.')
+        _parser.add_argument("--input-data-path", dest="input_data_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--mongodb-config", dest="mongodb_config", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=2)
+        _parsed_args = vars(_parser.parse_args())
+        _output_files = _parsed_args.pop("_output_paths", [])
+
+        _outputs = data_storage_func(**_parsed_args)
+
+        _output_serializers = [
+            _serialize_int,
+            _serialize_float,
+
+        ]
+
+        import os
+        for idx, output_file in enumerate(_output_files):
+            try:
+                os.makedirs(os.path.dirname(output_file))
+            except OSError:
+                pass
+            with open(output_file, 'w') as f:
+                f.write(_output_serializers[idx](_outputs[idx]))
+      image: python:3.9-slim
+    inputs:
+      parameters:
+      - {name: data-collection-func-output_data}
+      - {name: mongodb_config}
+    outputs:
+      artifacts:
+      - {name: data-storage-func-storage_success_rate, path: /tmp/outputs/storage_success_rate/data}
+      - {name: data-storage-func-stored_products, path: /tmp/outputs/stored_products/data}
+    metadata:
+      annotations: {pipelines.kubeflow.org/task_display_name: Data Storage, pipelines.kubeflow.org/component_spec: '{"description":
+          "Component that stores product data in MongoDB.", "implementation": {"container":
+          {"args": ["--input-data-path", {"inputValue": "input_data_path"}, "--mongodb-config",
+          {"inputValue": "mongodb_config"}, "----output-paths", {"outputPath": "stored_products"},
+          {"outputPath": "storage_success_rate"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas'' ''pymongo''
+          || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''pymongo'' --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def data_storage_func(\n    input_data_path,\n    mongodb_config\n):\n    \"\"\"\n    Component
+          that stores product data in MongoDB.\n\n    Args:\n        input_data_path:
+          Path to the extracted products data\n        mongodb_config: JSON string
+          with MongoDB connection details\n    Returns:\n        stored_products:
+          Number of products stored\n        storage_success_rate: Success rate of
+          storage operation\n    \"\"\"\n    import json\n    import pandas as pd\n    import
+          logging\n    from pymongo import MongoClient\n    from collections import
+          namedtuple\n\n    # Configure logging\n    logging.basicConfig(\n        level=logging.INFO,\n        format=''%(asctime)s
+          - %(name)s - %(levelname)s - %(message)s''\n    )\n    logger = logging.getLogger(''data-storage'')\n\n    try:\n        #
+          Parse configuration\n        config = json.loads(mongodb_config)\n\n        #
+          Load data\n        df = pd.read_csv(input_data_path)\n        products =
+          df.to_dict(''records'')\n\n        logger.info(f\"Loaded {len(products)}
+          products for storage\")\n\n        # Connect to MongoDB\n        client
+          = MongoClient(config[''connection_string''])\n        db = client[config[''database'']]\n        collection
+          = db[config[''collection'']]\n\n        # Store data with upsert\n        stored_count
+          = 0\n        for product in products:\n            result = collection.update_one(\n                {\"store_domain\":
+          product[\"store_domain\"], \"title\": product[\"title\"]},\n                {\"$set\":
+          product},\n                upsert=True\n            )\n            if result.modified_count
+          or result.upserted_id:\n                stored_count += 1\n\n        # Log
+          results\n        logger.info(f\"Successfully stored {stored_count} products
+          in MongoDB\")\n\n        # Calculate metrics\n        storage_success_rate
+          = stored_count / len(products) if products else 0\n\n        Outputs = namedtuple(''Outputs'',
+          [''stored_products'', ''storage_success_rate''])\n        return Outputs(stored_count,
+          storage_success_rate)\n\n    except Exception as e:\n        logger.error(f\"Error
+          in data storage: {str(e)}\")\n        raise\n\ndef _serialize_float(float_value:
+          float) -> str:\n    if isinstance(float_value, str):\n        return float_value\n    if
+          not isinstance(float_value, (float, int)):\n        raise TypeError(''Value
+          \"{}\" has type \"{}\" instead of float.''.format(\n            str(float_value),
+          str(type(float_value))))\n    return str(float_value)\n\ndef _serialize_int(int_value:
+          int) -> str:\n    if isinstance(int_value, str):\n        return int_value\n    if
+          not isinstance(int_value, int):\n        raise TypeError(''Value \"{}\"
+          has type \"{}\" instead of int.''.format(\n            str(int_value), str(type(int_value))))\n    return
+          str(int_value)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Data
+          storage func'', description=''Component that stores product data in MongoDB.'')\n_parser.add_argument(\"--input-data-path\",
+          dest=\"input_data_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--mongodb-config\",
+          dest=\"mongodb_config\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\",
+          dest=\"_output_paths\", type=str, nargs=2)\n_parsed_args = vars(_parser.parse_args())\n_output_files
+          = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = data_storage_func(**_parsed_args)\n\n_output_serializers
+          = [\n    _serialize_int,\n    _serialize_float,\n\n]\n\nimport os\nfor idx,
+          output_file in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n    except
+          OSError:\n        pass\n    with open(output_file, ''w'') as f:\n        f.write(_output_serializers[idx](_outputs[idx]))\n"],
+          "image": "python:3.9-slim"}}, "inputs": [{"description": "Path to the extracted
+          products data", "name": "input_data_path", "type": "String"}, {"description":
+          "JSON string with MongoDB connection details", "name": "mongodb_config",
+          "type": "String"}], "name": "Data storage func", "outputs": [{"name": "stored_products",
+          "type": "Integer"}, {"name": "storage_success_rate", "type": "Float"}]}',
+        pipelines.kubeflow.org/component_ref: '{}', pipelines.kubeflow.org/arguments.parameters: '{"input_data_path":
+          "{{inputs.parameters.data-collection-func-output_data}}", "mongodb_config":
+          "{{inputs.parameters.mongodb_config}}"}'}
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+  - name: ecommerce-intelligence-pipeline-v1
+    inputs:
+      parameters:
+      - {name: analysis_config}
+      - {name: export_config}
+      - {name: mongodb_config}
+      - {name: scraping_config}
+      - {name: stores_config}
+    dag:
+      tasks:
+      - name: analysis-func
+        template: analysis-func
+        dependencies: [data-storage-func]
+        arguments:
+          parameters:
+          - {name: analysis_config, value: '{{inputs.parameters.analysis_config}}'}
+          - {name: mongodb_config, value: '{{inputs.parameters.mongodb_config}}'}
+      - name: data-collection-func
+        template: data-collection-func
+        arguments:
+          parameters:
+          - {name: scraping_config, value: '{{inputs.parameters.scraping_config}}'}
+          - {name: stores_config, value: '{{inputs.parameters.stores_config}}'}
+      - name: data-storage-func
+        template: data-storage-func
+        dependencies: [data-collection-func]
+        arguments:
+          parameters:
+          - {name: data-collection-func-output_data, value: '{{tasks.data-collection-func.outputs.parameters.data-collection-func-output_data}}'}
+          - {name: mongodb_config, value: '{{inputs.parameters.mongodb_config}}'}
+      - name: export-results-func
+        template: export-results-func
+        dependencies: [analysis-func]
+        arguments:
+          parameters:
+          - {name: analysis-func-output_data, value: '{{tasks.analysis-func.outputs.parameters.analysis-func-output_data}}'}
+          - {name: export_config, value: '{{inputs.parameters.export_config}}'}
+  - name: export-results-func
+    container:
+      args: [--input-data-path, '{{inputs.parameters.analysis-func-output_data}}',
+        --export-config, '{{inputs.parameters.export_config}}', '----output-paths',
+        /tmp/outputs/json_output_path/data, /tmp/outputs/csv_output_path/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet
+        --no-warn-script-location 'pandas' --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def export_results_func(
+            input_data_path,
+            export_config
+        ):
+            """
+            Component that exports the top products to various formats.
+
+            Args:
+                input_data_path: Path to the top products data
+                export_config: JSON string with export parameters
+            Returns:
+                json_output_path: Path to the JSON output
+                csv_output_path: Path to the CSV output
+            """
+            import json
+            import pandas as pd
+            import logging
+            import os
+            from collections import namedtuple
+
+            # Configure logging
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            logger = logging.getLogger('export-results')
+
+            try:
+                # Parse configuration
+                config = json.loads(export_config)
+
+                # Load data
+                df = pd.read_csv(input_data_path)
+
+                # Apply any transformations specified in config
+                if config.get('include_columns'):
+                    df = df[config['include_columns']]
+
+                # Create output directory
+                os.makedirs('/tmp/outputs', exist_ok=True)
+
+                # Export to JSON
+                json_output_path = '/tmp/outputs/top_products.json'
+                df.to_json(json_output_path, orient='records', indent=2)
+                logger.info(f"Exported JSON results to {json_output_path}")
+
+                # Export to CSV
+                csv_output_path = '/tmp/outputs/top_products.csv'
+                df.to_csv(csv_output_path, index=False)
+                logger.info(f"Exported CSV results to {csv_output_path}")
+
+                Outputs = namedtuple('Outputs', ['json_output_path', 'csv_output_path'])
+                return Outputs(json_output_path, csv_output_path)
+
+            except Exception as e:
+                logger.error(f"Error in export: {str(e)}")
+                raise
+
+        def _serialize_str(str_value: str) -> str:
+            if not isinstance(str_value, str):
+                raise TypeError('Value "{}" has type "{}" instead of str.'.format(
+                    str(str_value), str(type(str_value))))
+            return str_value
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Export results func', description='Component that exports the top products to various formats.')
+        _parser.add_argument("--input-data-path", dest="input_data_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--export-config", dest="export_config", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=2)
+        _parsed_args = vars(_parser.parse_args())
+        _output_files = _parsed_args.pop("_output_paths", [])
+
+        _outputs = export_results_func(**_parsed_args)
+
+        _output_serializers = [
+            _serialize_str,
+            _serialize_str,
+
+        ]
+
+        import os
+        for idx, output_file in enumerate(_output_files):
+            try:
+                os.makedirs(os.path.dirname(output_file))
+            except OSError:
+                pass
+            with open(output_file, 'w') as f:
+                f.write(_output_serializers[idx](_outputs[idx]))
+      image: python:3.9-slim
+    inputs:
+      parameters:
+      - {name: analysis-func-output_data}
+      - {name: export_config}
+    outputs:
+      artifacts:
+      - {name: export-results-func-csv_output_path, path: /tmp/outputs/csv_output_path/data}
+      - {name: export-results-func-json_output_path, path: /tmp/outputs/json_output_path/data}
+    metadata:
+      annotations: {pipelines.kubeflow.org/task_display_name: Export Results, pipelines.kubeflow.org/component_spec: '{"description":
+          "Component that exports the top products to various formats.", "implementation":
+          {"container": {"args": ["--input-data-path", {"inputValue": "input_data_path"},
+          "--export-config", {"inputValue": "export_config"}, "----output-paths",
+          {"outputPath": "json_output_path"}, {"outputPath": "csv_output_path"}],
+          "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip
+          install --quiet --no-warn-script-location ''pandas'' || PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas'' --user)
+          && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf \"%s\" \"$0\"
+          > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n", "def export_results_func(\n    input_data_path,\n    export_config\n):\n    \"\"\"\n    Component
+          that exports the top products to various formats.\n\n    Args:\n        input_data_path:
+          Path to the top products data\n        export_config: JSON string with export
+          parameters\n    Returns:\n        json_output_path: Path to the JSON output\n        csv_output_path:
+          Path to the CSV output\n    \"\"\"\n    import json\n    import pandas as
+          pd\n    import logging\n    import os\n    from collections import namedtuple\n\n    #
+          Configure logging\n    logging.basicConfig(\n        level=logging.INFO,\n        format=''%(asctime)s
+          - %(name)s - %(levelname)s - %(message)s''\n    )\n    logger = logging.getLogger(''export-results'')\n\n    try:\n        #
+          Parse configuration\n        config = json.loads(export_config)\n\n        #
+          Load data\n        df = pd.read_csv(input_data_path)\n\n        # Apply
+          any transformations specified in config\n        if config.get(''include_columns''):\n            df
+          = df[config[''include_columns'']]\n\n        # Create output directory\n        os.makedirs(''/tmp/outputs'',
+          exist_ok=True)\n\n        # Export to JSON\n        json_output_path = ''/tmp/outputs/top_products.json''\n        df.to_json(json_output_path,
+          orient=''records'', indent=2)\n        logger.info(f\"Exported JSON results
+          to {json_output_path}\")\n\n        # Export to CSV\n        csv_output_path
+          = ''/tmp/outputs/top_products.csv''\n        df.to_csv(csv_output_path,
+          index=False)\n        logger.info(f\"Exported CSV results to {csv_output_path}\")\n\n        Outputs
+          = namedtuple(''Outputs'', [''json_output_path'', ''csv_output_path''])\n        return
+          Outputs(json_output_path, csv_output_path)\n\n    except Exception as e:\n        logger.error(f\"Error
+          in export: {str(e)}\")\n        raise\n\ndef _serialize_str(str_value: str)
+          -> str:\n    if not isinstance(str_value, str):\n        raise TypeError(''Value
+          \"{}\" has type \"{}\" instead of str.''.format(\n            str(str_value),
+          str(type(str_value))))\n    return str_value\n\nimport argparse\n_parser
+          = argparse.ArgumentParser(prog=''Export results func'', description=''Component
+          that exports the top products to various formats.'')\n_parser.add_argument(\"--input-data-path\",
+          dest=\"input_data_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--export-config\",
+          dest=\"export_config\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\",
+          dest=\"_output_paths\", type=str, nargs=2)\n_parsed_args = vars(_parser.parse_args())\n_output_files
+          = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = export_results_func(**_parsed_args)\n\n_output_serializers
+          = [\n    _serialize_str,\n    _serialize_str,\n\n]\n\nimport os\nfor idx,
+          output_file in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n    except
+          OSError:\n        pass\n    with open(output_file, ''w'') as f:\n        f.write(_output_serializers[idx](_outputs[idx]))\n"],
+          "image": "python:3.9-slim"}}, "inputs": [{"description": "Path to the top
+          products data", "name": "input_data_path", "type": "String"}, {"description":
+          "JSON string with export parameters", "name": "export_config", "type": "String"}],
+          "name": "Export results func", "outputs": [{"name": "json_output_path",
+          "type": "String"}, {"name": "csv_output_path", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}',
+        pipelines.kubeflow.org/arguments.parameters: '{"export_config": "{{inputs.parameters.export_config}}",
+          "input_data_path": "{{inputs.parameters.analysis-func-output_data}}"}'}
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+  arguments:
+    parameters:
+    - {name: stores_config, value: '[]'}
+    - {name: scraping_config, value: '{}'}
+    - {name: mongodb_config, value: '{"connection_string": "mongodb://localhost:27017",
+        "database": "ecommerce_products", "collection": "products"}'}
+    - {name: analysis_config, value: '{"k": 10, "criteria": {"weights": {"price":
+        0.3, "availability": 0.25, "stock": 0.2}}}'}
+    - {name: export_config, value: '{"include_columns": ["store_domain", "title",
+        "price", "score"]}'}
+  serviceAccountName: pipeline-runner

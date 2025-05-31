@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference the original Kubeflow manifests
+resources:
+- github.com/kubeflow/manifests/common/kubeflow-namespace/base
+- github.com/kubeflow/manifests/apps/pipeline/upstream/env/platform-agnostic-multi-user
+
+# Add our custom MySQL configs
+- mysql-config.yaml
+- mysql-init.yaml
+
+# Patch the MySQL deployment to use our custom config
+patchesStrategicMerge:
+- mysql-patch.yaml

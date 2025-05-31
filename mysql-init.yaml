@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-script
+  namespace: kubeflow
+data:
+  init.sql: |
+    ALTER DATABASE mlpipeline CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+    
+    -- Set global variables
+    SET GLOBAL character_set_server = utf8mb4;
+    SET GLOBAL collation_server = utf8mb4_0900_ai_ci;
+    SET GLOBAL character_set_database = utf8mb4;
+    SET GLOBAL collation_connection = utf8mb4_0900_ai_ci;
+    
+    -- Create user with proper collation
+    CREATE USER IF NOT EXISTS 'mlpipeline'@'%' IDENTIFIED BY 'mlpipeline' COLLATE utf8mb4_0900_ai_ci;
+    GRANT ALL PRIVILEGES ON mlpipeline.* TO 'mlpipeline'@'%';
+    FLUSH PRIVILEGES;

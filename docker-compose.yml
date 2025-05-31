@@ -1,0 +1,39 @@
+version: '3'
+services:
+  data-collection:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: data-collection
+    volumes:
+      - ./data:/app/data
+    environment:
+      - STORES_CONFIG_PATH=/app/data/stores_config.json
+      - OUTPUT_PATH=/app/data/extracted_products.json
+
+  data-storage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: data-storage
+    volumes:
+      - ./data:/app/data
+    environment:
+      - MONGODB_URI=mongodb://host.docker.internal:27017
+      - INPUT_PATH=/app/data/extracted_products.json
+    depends_on:
+      - data-collection
+
+  analysis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: analysis
+    volumes:
+      - ./data:/app/data
+    environment:
+      - MONGODB_URI=mongodb://host.docker.internal:27017
+      - OUTPUT_PATH=/app/data/top_products.json
+      - ANALYSIS_CONFIG_PATH=/app/data/analysis_config.json
+    depends_on:
+      - data-storage
