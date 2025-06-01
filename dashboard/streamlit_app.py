@@ -1,16 +1,17 @@
 import streamlit as st
+import requests
+import json
+import pandas as pd
+import time
+from datetime import datetime
 import sys
 import os
-from datetime import datetime
-import pandas as pd
-import numpy as np
 
 # Ajouter le chemin du projet pour les imports
 sys.path.append(os.path.dirname(__file__))
 
 # Imports des composants du dashboard
-from pages import overview, top_products, geography, shops_ranking
-# CORRECTION: Importer les bonnes fonctions
+from module_view import overview, top_products, geography, shops_ranking, api_extraction,mongodb_interface
 from utils.dashboard_utils import init_analyzer, load_custom_css
 
 # Configuration de la page
@@ -28,7 +29,6 @@ load_custom_css()
 @st.cache_resource
 def get_analyzer():
     try:
-        # CORRECTION: Utiliser init_analyzer() au lieu de __init__()
         analyzer = init_analyzer()
         if analyzer is None:
             st.error("Impossible d'initialiser l'analyseur de données")
@@ -54,7 +54,9 @@ def main():
         "📊 Vue d'ensemble": "overview",
         "🏆 Top Produits": "top_products", 
         "🌍 Analyse Géographique": "geography",
-        "🏪 Classement Boutiques": "shops_ranking"
+        "🏪 Classement Boutiques": "shops_ranking",
+        "🔧 Extraction API": "api_extraction",
+        "Export vers une DB": "mongodb_interface"
     }
     
     selected_page = st.sidebar.selectbox(
@@ -66,6 +68,16 @@ def main():
     # Affichage des informations système
     st.sidebar.markdown("---")
     st.sidebar.markdown("### ⚙️ Informations Système")
+    
+    # Vérification de l'état de l'API (uniquement pour info dans la sidebar)
+    try:
+        response = requests.get("http://localhost:8000/health", timeout=2)
+        if response.status_code == 200:
+            st.sidebar.success("✅ API FastAPI connectée")
+        else:
+            st.sidebar.warning("⚠️ API FastAPI non accessible")
+    except:
+        st.sidebar.warning("⚠️ API FastAPI non accessible")
     
     # Initialisation de l'analyseur
     analyzer = get_analyzer()
@@ -103,6 +115,10 @@ def main():
             geography.show_page(analyzer)
         elif page_key == "shops_ranking":
             shops_ranking.show_page(analyzer)
+        elif page_key == "api_extraction":
+            api_extraction.show_page() 
+        elif page_key == "mongodb_interface":
+            mongodb_interface.show_page() 
     except Exception as e:
         st.error(f"Erreur lors du chargement de la page: {e}")
         st.exception(e)
