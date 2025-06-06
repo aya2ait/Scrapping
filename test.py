@@ -1,157 +1,411 @@
-
-import kfp
-import requests
+import os
 import json
+import requests
+from typing import Dict, List, Any, Optional
+from groq import Groq
+import pandas as pd
+from datetime import datetime
+import logging
 
-def test_kubeflow_connection():
-    """Test la connexion à Kubeflow"""
+# Configuration Groq
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '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')
+
+class LLMEnhancer:
+    def __init__(self, groq_api_key: str = GROQ_API_KEY):
+        """Initialize LLM Enhancer with Groq"""
+        self.client = Groq(api_key=groq_api_key)
+        self.model = "llama3-8b-8192"  # Ou llama3-70b-8192 pour plus de puissance
+        self.logger = logging.getLogger(__name__)
     
-    print("🔍 Test de connexion Kubeflow...")
-    print(f"📦 Version KFP SDK: {kfp.__version__}")
-    
-    # Test 1: Vérifier que l'interface web est accessible
-    try:
-        response = requests.get("http://localhost:8080", timeout=5)
-        if response.status_code == 200:
-            print("✅ Interface web accessible sur http://localhost:8080")
-        else:
-            print(f"❌ Interface web non accessible (status: {response.status_code})")
-            return False
-    except Exception as e:
-        print(f"❌ Erreur d'accès à l'interface web: {e}")
-        return False
-    
-    # Test 2: Tester différentes versions d'API
-    test_endpoints = [
-        "/api/v1/healthz",           # v1 API
-        "/apis/v1beta1/healthz",     # v1beta1 API  
-        "/apis/v2beta1/healthz",     # v2beta1 API
-        "/healthz"                   # API simple
-    ]
-    
-    working_endpoint = None
-    for endpoint in test_endpoints:
+    def generate_product_summary(self, top_k_products: List[Dict]) -> str:
+        """Génère un résumé intelligent des top-K produits"""
         try:
-            url = f"http://localhost:8080{endpoint}"
-            response = requests.get(url, timeout=2)
-            if response.status_code == 200:
-                print(f"✅ API endpoint fonctionnel: {endpoint}")
-                working_endpoint = endpoint
-                break
-            else:
-                print(f"❌ {endpoint} → Status {response.status_code}")
-        except Exception as e:
-            print(f"❌ {endpoint} → Erreur: {str(e)[:50]}")
-    
-    if not working_endpoint:
-        print("❌ Aucun endpoint d'API santé trouvé")
-        return False
-    
-    # Test 3: Tenter la connexion KFP avec gestion d'erreurs
-    try:
-        print("\n🔌 Test connexion client KFP...")
-        
-        # Version simple sans vérification de santé
-        client = kfp.Client(
-            host='http://localhost:8080',
-            existing_token=None
-        )
-        
-        # Test basique: lister les expériences
-        experiments = client.list_experiments(page_size=1)
-        print("✅ Connexion KFP réussie!")
-        print(f"📊 Nombre d'expériences: {experiments.total_size if hasattr(experiments, 'total_size') else 'N/A'}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Erreur connexion KFP: {e}")
-        
-        # Tentative avec configuration alternative
-        try:
-            print("🔄 Tentative avec configuration alternative...")
-            from kfp.client import Client
+            # Préparer le contexte pour le LLM
+            products_context = []
+            for i, product in enumerate(top_k_products[:10], 1):  # Limiter à 10 pour éviter les tokens
+                context = f"""
+                Produit #{i}:
+                - Titre: {product.get('title', 'N/A')}
+                - Vendeur: {product.get('vendor', 'N/A')}
+                - Prix: {product.get('price', 0)}€
+                - Score: {product.get('synthetic_score', 0):.3f}
+                - Disponible: {'Oui' if product.get('available') else 'Non'}
+                - Plateforme: {product.get('platform', 'N/A')}
+                - Région: {product.get('store_region', 'N/A')}
+                """
+                products_context.append(context)
             
-            # Client sans vérification de santé
-            client = Client(
-                host='http://localhost:8080',
-                existing_token=None,
-                namespace='kubeflow'
+            context_text = "\n".join(products_context)
+            
+            prompt = f"""
+            En tant qu'analyste e-commerce expert, analysez ces {len(top_k_products)} produits top performers et générez un résumé stratégique.
+
+            DONNÉES DES PRODUITS:
+            {context_text}
+
+            ANALYSEZ ET FOURNISSEZ:
+            1. **Tendances principales** : Quels patterns émergent des top produits ?
+            2. **Opportunités business** : Quelles opportunités ces produits révèlent-ils ?
+            3. **Recommandations stratégiques** : Que devrait faire un e-commerçant ?
+            4. **Insights concurrentiels** : Quels avantages concurrentiels identifier ?
+            5. **Points d'attention** : Quels risques ou défis anticiper ?
+
+            Répondez de manière concise et actionnable en français, maximum 300 mots.
+            """
+            
+            response = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "Vous êtes un expert en analyse e-commerce et business intelligence."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.model,
+                temperature=0.7,
+                max_tokens=500
             )
             
-            print("✅ Connexion alternative réussie!")
-            return True
+            return response.choices[0].message.content
             
-        except Exception as e2:
-            print(f"❌ Connexion alternative échouée: {e2}")
-            return False
-
-def get_kubeflow_version_info():
-    """Récupère les informations de version Kubeflow"""
+        except Exception as e:
+            self.logger.error(f"Erreur génération résumé: {e}")
+            return "Impossible de générer le résumé automatiquement."
     
-    print("\n🔍 Informations sur l'installation Kubeflow...")
-    
-    try:
-        # Vérifier les pods Kubeflow
-        import subprocess
-        result = subprocess.run(
-            ["kubectl", "get", "pods", "-n", "kubeflow", "-o", "json"],
-            capture_output=True, text=True, check=True
-        )
-        
-        pods_info = json.loads(result.stdout)
-        
-        print("📦 Pods Kubeflow actifs:")
-        for pod in pods_info['items']:
-            name = pod['metadata']['name']
-            image = pod['spec']['containers'][0]['image'] if pod['spec']['containers'] else 'N/A'
-            status = pod['status']['phase']
+    def analyze_market_opportunities(self, products_data: Dict, geographical_analysis: Dict = None) -> str:
+        """Analyse les opportunités de marché basées sur les données"""
+        try:
+            # Extraire les statistiques clés
+            stats = products_data.get('statistics', {})
+            top_products = products_data.get('top_k_products', [])
             
-            if 'ml-pipeline' in name:
-                print(f"  🔹 {name}")
-                print(f"    Image: {image}")
-                print(f"    Status: {status}")
-                
-    except Exception as e:
-        print(f"❌ Impossible de récupérer les infos Kubeflow: {e}")
-        print("💡 Assurez-vous que kubectl est installé et configuré")
+            context = f"""
+            STATISTIQUES MARCHÉ:
+            - Nombre total de produits analysés: {products_data.get('total_products', 0)}
+            - Score moyen: {stats.get('average_score', 0):.3f}
+            - Fourchette de prix: {stats.get('price_range', {}).get('min', 0)}€ - {stats.get('price_range', {}).get('max', 0)}€
+            - Prix moyen: {stats.get('price_range', {}).get('avg', 0)}€
+            - Taux de disponibilité: {stats.get('availability_rate', 0)*100:.1f}%
+            
+            TOP 5 PRODUITS:
+            """
+            
+            for i, product in enumerate(top_products[:5], 1):
+                context += f"\n{i}. {product.get('title', 'N/A')} - {product.get('price', 0)}€ (Score: {product.get('synthetic_score', 0):.3f})"
+            
+            if geographical_analysis:
+                context += f"\n\nANALYSE GÉOGRAPHIQUE DISPONIBLE: {len(geographical_analysis)} régions analysées"
+            
+            prompt = f"""
+            En tant que consultant en stratégie e-commerce, analysez ces données de marché et identifiez les opportunités business.
 
-def suggest_fixes():
-    """Suggère des corrections basées sur les tests"""
-    
-    print("\n🛠️ SOLUTIONS RECOMMANDÉES:")
-    print("=" * 50)
-    
-    print("1. 📥 DOWNGRADE DU SDK KFP:")
-    print("   pip uninstall kfp")
-    print("   pip install kfp==1.8.22")
-    print()
-    
-    print("2. 🔄 OU UPGRADE KUBEFLOW (plus complexe):")
-    print("   kubectl delete -k 'github.com/kubeflow/pipelines//manifests/kustomize/env/platform-agnostic?ref=1.8.1'")
-    print("   kubectl apply -k 'github.com/kubeflow/pipelines//manifests/kustomize/env/platform-agnostic?ref=2.0.1'")
-    print()
-    
-    print("3. 🐳 SOLUTION DOCKER ALTERNATIVE:")
-    print("   docker run -p 8080:8080 gcr.io/ml-pipeline/frontend:1.8.22")
-    print()
-    
-    print("4. ⚡ SOLUTION RAPIDE - CLIENT MODIFIÉ:")
-    print("   Utilisez le code modifié ci-dessous dans votre script")
+            DONNÉES:
+            {context}
 
+            FOURNISSEZ UNE ANALYSE STRUCTURÉE:
+            
+            🎯 **OPPORTUNITÉS IDENTIFIÉES**
+            - 3 opportunités principales de croissance
+            
+            📊 **SEGMENTS PORTEURS**
+            - Segments de prix les plus attractifs
+            - Catégories sous-exploitées
+            
+            🌍 **EXPANSION GÉOGRAPHIQUE**
+            - Recommandations par région
+            
+            ⚡ **ACTIONS PRIORITAIRES**
+            - 3 actions concrètes à mettre en œuvre
+            
+            Soyez précis, chiffré et actionnable. Maximum 400 mots.
+            """
+            
+            response = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "Vous êtes un consultant senior spécialisé en stratégie e-commerce et expansion de marché."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.model,
+                temperature=0.6,
+                max_tokens=600
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            self.logger.error(f"Erreur analyse opportunités: {e}")
+            return "Impossible d'analyser les opportunités automatiquement."
+    
+    def generate_competitive_insights(self, shops_analysis: Dict) -> str:
+        """Génère des insights concurrentiels basés sur l'analyse des boutiques"""
+        try:
+            if not shops_analysis:
+                return "Aucune donnée de boutiques disponible pour l'analyse concurrentielle."
+            
+            top_shops = shops_analysis.get('top_shops', {})
+            flagship_products = shops_analysis.get('flagship_products', {})
+            
+            context = f"""
+            ANALYSE CONCURRENTIELLE DES BOUTIQUES:
+            
+            TOP BOUTIQUES (par score moyen):
+            """
+            
+            for shop, score in list(top_shops.items())[:10]:
+                flagship = flagship_products.get(shop, {})
+                context += f"\n- {shop}: Score {score:.3f}"
+                if flagship:
+                    context += f" | Produit phare: {flagship.get('title', 'N/A')} ({flagship.get('price', 0)}€)"
+            
+            prompt = f"""
+            En tant qu'analyste concurrentiel e-commerce, analysez le paysage concurrentiel et fournissez des insights stratégiques.
+
+            {context}
+
+            FOURNISSEZ:
+            
+            🏆 **LEADERS DU MARCHÉ**
+            - Qui domine et pourquoi ?
+            - Leurs stratégies gagnantes
+            
+            🎯 **POSITIONNEMENT CONCURRENTIEL**
+            - Espaces de marché peu contestés
+            - Différenciations possibles
+            
+            📈 **BENCHMARKS CLÉS**
+            - KPIs à surveiller chez les concurrents
+            - Gaps d'opportunités
+            
+            ⚡ **RECOMMANDATIONS TACTIQUES**
+            - Comment se positionner vs la concurrence
+            - Avantages concurrentiels à développer
+            
+            Maximum 350 mots, soyez stratégique et actionnable.
+            """
+            
+            response = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "Vous êtes un expert en intelligence concurrentielle pour l'e-commerce."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.model,
+                temperature=0.5,
+                max_tokens=500
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            self.logger.error(f"Erreur insights concurrentiels: {e}")
+            return "Impossible de générer les insights concurrentiels automatiquement."
+    
+    def generate_pricing_strategy(self, products_data: Dict) -> str:
+        """Génère des recommandations de stratégie de prix"""
+        try:
+            stats = products_data.get('statistics', {})
+            top_products = products_data.get('top_k_products', [])
+            
+            # Analyser la distribution des prix des top produits
+            prices = [p.get('price', 0) for p in top_products if p.get('price', 0) > 0]
+            
+            if not prices:
+                return "Données de prix insuffisantes pour l'analyse."
+            
+            price_analysis = {
+                'min_price': min(prices),
+                'max_price': max(prices),
+                'avg_price': sum(prices) / len(prices),
+                'median_price': sorted(prices)[len(prices)//2]
+            }
+            
+            prompt = f"""
+            En tant que pricing strategist e-commerce, analysez cette data de prix et recommandez une stratégie.
+
+            ANALYSE DES PRIX TOP PRODUITS:
+            - Prix minimum: {price_analysis['min_price']:.2f}€
+            - Prix maximum: {price_analysis['max_price']:.2f}€
+            - Prix moyen: {price_analysis['avg_price']:.2f}€
+            - Prix médian: {price_analysis['median_price']:.2f}€
+            
+            MARCHÉ GLOBAL:
+            - Prix moyen marché: {stats.get('price_range', {}).get('avg', 0):.2f}€
+            - Fourchette totale: {stats.get('price_range', {}).get('min', 0):.2f}€ - {stats.get('price_range', {}).get('max', 0):.2f}€
+
+            RECOMMANDATIONS PRICING:
+            
+            💰 **ZONES DE PRIX OPTIMALES**
+            - Sweet spots identifiés
+            
+            📊 **STRATÉGIES RECOMMANDÉES**
+            - Pénétration vs écrémage
+            - Positionnement prix/valeur
+            
+            🎯 **TACTICAL PRICING**
+            - Prix psychologiques
+            - Bundles et promotions
+            
+            ⚡ **IMPLÉMENTATION**
+            - Étapes concrètes de mise en œuvre
+            
+            Maximum 300 mots, focus actionnable.
+            """
+            
+            response = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "Vous êtes un expert en stratégie de prix pour l'e-commerce."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.model,
+                temperature=0.4,
+                max_tokens=450
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            self.logger.error(f"Erreur stratégie pricing: {e}")
+            return "Impossible de générer la stratégie de prix automatiquement."
+    
+    def create_executive_summary(self, complete_analysis: Dict) -> str:
+        """Crée un résumé exécutif complet"""
+        try:
+            prompt = f"""
+            En tant que directeur e-commerce, créez un résumé exécutif stratégique basé sur cette analyse complète.
+
+            DONNÉES CLÉS:
+            - {complete_analysis.get('total_products', 0)} produits analysés
+            - Top {complete_analysis.get('k', 0)} produits sélectionnés
+            - Score moyen: {complete_analysis.get('statistics', {}).get('average_score', 0):.3f}
+            - Méthode: {complete_analysis.get('score_method', 'synthetic')}
+
+            CRÉEZ UN EXECUTIVE SUMMARY:
+            
+            📋 **RÉSUMÉ EXÉCUTIF**
+            - 2-3 points clés en une phrase chacun
+            
+            📊 **CHIFFRES CLÉS**
+            - KPIs les plus importants
+            
+            🎯 **RECOMMANDATIONS PRIORITAIRES**
+            - 3 actions à impact immédiat
+            
+            ⏱️ **TIMELINE RECOMMANDÉE**
+            - Court terme (1-3 mois)
+            - Moyen terme (3-6 mois)
+            
+            🎯 **ROI ATTENDU**
+            - Estimation d'impact business
+            
+            Format: Executive summary professionnel, 250 mots maximum.
+            """
+            
+            response = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "Vous êtes un directeur e-commerce expérimenté rédigeant pour le C-level."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.model,
+                temperature=0.3,
+                max_tokens=350
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            self.logger.error(f"Erreur résumé exécutif: {e}")
+            return "Impossible de générer le résumé exécutif automatiquement."
+
+# Extension de votre API Flask existante
+def enhance_api_with_llm():
+    """
+    Fonction pour intégrer l'enhancer LLM à votre API existante
+    """
+    
+    # Ajouter cette route à votre app Flask existante
+    @app.route('/api/llm-enhanced-analysis', methods=['POST'])
+    def get_llm_enhanced_analysis():
+        """
+        Endpoint enrichi avec analyse LLM
+        Utilise les mêmes paramètres que /api/top-k-products mais ajoute l'analyse LLM
+        """
+        try:
+            # Récupérer l'analyse standard (réutiliser la logique existante)
+            standard_response = get_top_k_products()
+            
+            if standard_response[1] != 200:  # Si erreur dans l'analyse standard
+                return standard_response
+            
+            analysis_data = standard_response[0].get_json()
+            
+            # Initialiser le LLM enhancer
+            llm_enhancer = LLMEnhancer()
+            
+            # Générer les enrichissements LLM
+            enhancements = {
+                'product_summary': llm_enhancer.generate_product_summary(
+                    analysis_data.get('top_k_products', [])
+                ),
+                'market_opportunities': llm_enhancer.analyze_market_opportunities(
+                    analysis_data,
+                    analysis_data.get('geographical_analysis')
+                ),
+                'executive_summary': llm_enhancer.create_executive_summary(analysis_data)
+            }
+            
+            # Ajouter l'analyse concurrentielle si disponible
+            if analysis_data.get('shops_analysis'):
+                enhancements['competitive_insights'] = llm_enhancer.generate_competitive_insights(
+                    analysis_data['shops_analysis']
+                )
+            
+            # Ajouter la stratégie de prix
+            enhancements['pricing_strategy'] = llm_enhancer.generate_pricing_strategy(analysis_data)
+            
+            # Combiner les données
+            analysis_data['llm_insights'] = enhancements
+            analysis_data['enhanced_at'] = datetime.utcnow().isoformat()
+            
+            return jsonify(analysis_data)
+            
+        except Exception as e:
+            logger.error(f"Erreur dans l'analyse LLM enrichie: {e}")
+            return jsonify({'error': str(e)}), 500
+
+# Exemple d'utilisation standalone
 if __name__ == "__main__":
-    print("🧪 DIAGNOSTIC KUBEFLOW PIPELINES")
-    print("=" * 50)
+    # Test de l'enhancer LLM
+    enhancer = LLMEnhancer()
     
-    # Tests de connexion
-    connection_ok = test_kubeflow_connection()
+    # Exemple de données de test
+    sample_products = [
+        {
+            'title': 'iPhone 15 Pro',
+            'vendor': 'Apple Store',
+            'price': 1199,
+            'synthetic_score': 0.923,
+            'available': True,
+            'platform': 'shopify',
+            'store_region': 'US'
+        },
+        {
+            'title': 'Samsung Galaxy S24',
+            'vendor': 'Samsung',
+            'price': 899,
+            'synthetic_score': 0.887,
+            'available': True,
+            'platform': 'woocommerce',
+            'store_region': 'EU'
+        }
+    ]
     
-    # Informations sur l'installation
-    get_kubeflow_version_info()
+    # Test des différentes analyses
+    print("🔍 Résumé des produits:")
+    print(enhancer.generate_product_summary(sample_products))
     
-    # Suggestions
-    if not connection_ok:
-        suggest_fixes()
-    else:
-        print("\n🎉 Connexion Kubeflow opérationnelle!")
-        print("Vous pouvez maintenant exécuter votre pipeline.")
+    print("\n📊 Analyse des opportunités:")
+    sample_data = {
+        'total_products': 1000,
+        'top_k_products': sample_products,
+        'statistics': {
+            'average_score': 0.756,
+            'price_range': {'min': 10, 'max': 2000, 'avg': 245}
+        }
+    }
+    print(enhancer.analyze_market_opportunities(sample_data))
