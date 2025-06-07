@@ -10,6 +10,13 @@ import sys
 from pathlib import Path
 import os
 from typing import Dict, List, Any, Optional
+import logging
+
+# --- MCP: Initialisation du logger centralisé ---
+# Configure basic logging for MCP
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+mcp_logger = logging.getLogger("MCP")
+# --- Fin MCP: Initialisation du logger centralisé ---
 
 # LangChain imports for complex LLM orchestration and conversational interface
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -24,28 +31,154 @@ try:
     # For this example, assuming 'paste.py' is in the same directory or on PYTHONPATH
     from paste import ProductAnalyzer
     ANALYZER_AVAILABLE = True
+    mcp_logger.info("ProductAnalyzer module loaded successfully.")
 except ImportError:
     ANALYZER_AVAILABLE = False
+    mcp_logger.error("ProductAnalyzer module not found. Please ensure 'paste.py' is accessible.")
 
-class BuyerLLMAnalyzer:
+# --- MCP: Classes d'Architecture Responsable ---
+
+class MCPHost:
+    """
+    Représente l'environnement principal (ex: app Streamlit).
+    Gère l'orchestration des clients et serveurs MCP.
+    """
+    def __init__(self, name: str = "StreamlitAppHost"):
+        self.name = name
+        mcp_logger.info(f"MCP Host '{self.name}' initialized.")
+
+    def run(self, page_function: callable):
+        """Exécute la fonction de la page principale de l'application."""
+        mcp_logger.info(f"MCP Host '{self.name}' is running.")
+        page_function()
+
+class MCPClient:
+    """
+    Classe de base pour les clients MCP.
+    Définit le protocole d'interaction responsable.
+    """
+    def __init__(self, client_name: str):
+        self.client_name = client_name
+        self.logger = logging.getLogger(f"MCP.Client.{client_name}")
+        self.permissions = MCPPermissions() # Gère les permissions du client
+
+    def declare_intention(self, intention: str, details: Dict = None):
+        """Déclare l'intention de l'action du client."""
+        log_message = f"Client '{self.client_name}' declaring intention: '{intention}'."
+        if details:
+            log_message += f" Details: {json.dumps(details)}"
+        self.logger.info(log_message)
+
+    def request_access(self, tool_name: str, requested_action: str) -> bool:
+        """Demande l'accès à un outil ou une donnée spécifique."""
+        if self.permissions.check_permission(self.client_name, tool_name, requested_action):
+            self.logger.info(f"Client '{self.client_name}' granted access to '{tool_name}' for action '{requested_action}'.")
+            return True
+        else:
+            self.logger.warning(f"Client '{self.client_name}' denied access to '{tool_name}' for action '{requested_action}'.")
+            return False
+
+class MCPServer:
+    """
+    Classe de base pour les serveurs MCP.
+    Expose des outils/données spécifiques de manière contrôlée.
+    """
+    def __init__(self, server_name: str):
+        self.server_name = server_name
+        self.logger = logging.getLogger(f"MCP.Server.{server_name}")
+        self.exposed_tools = {} # Dictionnaire des outils/données exposés
+
+    def expose_tool(self, tool_name: str, tool_function: callable, description: str = ""):
+        """Expose une fonction comme un outil MCP."""
+        self.exposed_tools[tool_name] = {"function": tool_function, "description": description}
+        self.logger.info(f"Server '{self.server_name}' exposed tool: '{tool_name}' - {description}")
+
+    def execute_tool(self, tool_name: str, *args, **kwargs):
+        """Exécute un outil exposé après vérification des permissions."""
+        if tool_name not in self.exposed_tools:
+            self.logger.error(f"Tool '{tool_name}' not exposed by server '{self.server_name}'.")
+            raise ValueError(f"Tool '{tool_name}' not exposed.")
+        
+        self.logger.info(f"Server '{self.server_name}' executing tool '{tool_name}' with args: {args}, kwargs: {kwargs}")
+        result = self.exposed_tools[tool_name]["function"](*args, **kwargs)
+        self.logger.info(f"Tool '{tool_name}' execution completed by server '{self.server_name}'.")
+        return result
+
+class MCPPermissions:
+    """
+    Gère les permissions et les règles d'accès.
+    Pourrait inclure la validation manuelle ou automatique.
+    """
+    def __init__(self):
+        # Exemple de règles de permissions (peut être chargé depuis un fichier, une DB, etc.)
+        self.rules = {
+            "BuyerLLMAnalyzer": {
+                "GroqLLM": ["invoke"],
+                "ProductAnalyzer": ["get_products_dataframe", "calculate_synthetic_score", 
+                                    "get_top_k_products", "analyze_by_geography", "analyze_shops_ranking"]
+            },
+            # Plus de règles...
+        }
+        mcp_logger.info("MCP Permissions system initialized.")
+
+    def check_permission(self, client_name: str, tool_name: str, action: str) -> bool:
+        """Vérifie si un client a la permission d'exécuter une action sur un outil."""
+        if client_name in self.rules and tool_name in self.rules[client_name]:
+            if action in self.rules[client_name][tool_name]:
+                mcp_logger.debug(f"Permission granted for {client_name} -> {tool_name}:{action}")
+                return True
+        mcp_logger.warning(f"Permission DENIED for {client_name} -> {tool_name}:{action}")
+        return False
+
+# --- Fin MCP: Classes d'Architecture Responsable ---
+
+# --- Adaptation de ProductAnalyzer en MCPServer ---
+class ProductDataServer(MCPServer):
+    """
+    Adapte ProductAnalyzer pour agir comme un MCPServer exposant des outils de données.
+    """
+    def __init__(self):
+        super().__init__("ProductDataServer")
+        self.analyzer = ProductAnalyzer()
+        # Exposer les méthodes clés de ProductAnalyzer comme des outils
+        self.expose_tool("get_products_dataframe", self.analyzer.get_products_dataframe, "Récupère les données brutes des produits.")
+        self.expose_tool("calculate_synthetic_score", self.analyzer.calculate_synthetic_score, "Calcule un score synthétique pour les produits.")
+        self.expose_tool("get_top_k_products", self.analyzer.get_top_k_products, "Sélectionne les K meilleurs produits.")
+        self.expose_tool("analyze_by_geography", self.analyzer.analyze_by_geography, "Analyse la disponibilité des produits par région.")
+        self.expose_tool("analyze_shops_ranking", self.analyzer.analyze_shops_ranking, "Classe les vendeurs par performance.")
+
+    @property
+    def client(self):
+        """Expose l'attribut client de l'analyseur sous-jacent."""
+        return self.analyzer.client
+
+# --- Fin Adaptation de ProductAnalyzer en MCPServer ---
+
+
+class BuyerLLMAnalyzer(MCPClient):
     """
     Analyseur LLM pour acheteurs utilisant Groq, avec orchestration LangChain.
     Permet une **orchestration complexe d'appels LLM**, un **chaînage de tâches**
     et une **interface conversationnelle** pour un chat interactif.
+    Hérite de MCPClient pour une interaction responsable.
     """
 
     def __init__(self, api_key: str = None):
+        super().__init__("BuyerLLMAnalyzer") # Initialisation du client MCP
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
+            self.logger.error("Groq API key missing. Define GROQ_API_KEY in environment variables.")
             raise ValueError("Clé API Groq manquante. Définissez GROQ_API_KEY dans les variables d'environnement.")
 
         # Initialisation du modèle Groq via LangChain
         self.llm = ChatGroq(api_key=self.api_key, model="llama-3.3-70b-versatile", temperature=0.3)
         self.output_parser = StrOutputParser()
+        self.logger.info("BuyerLLMAnalyzer initialized with Groq model.")
 
     def _prepare_buyer_context(self, data: Dict, analysis_type: str) -> str:
         """Prépare le contexte des données pour l'acheteur"""
-
+        self.declare_intention(f"Preparing buyer context for {analysis_type} analysis", {"data_keys": list(data.keys())})
+        
         context_parts = []
 
         # Statistiques pour l'acheteur
@@ -60,12 +193,12 @@ Options d'achat disponibles:
 - Prix moyen du marché: {stats.get('price_range', {}).get('avg', 'N/A')}€
 - Pourcentage de produits en stock: {stats.get('availability_rate', 'N/A')}%
             """)
+            self.logger.debug(f"Statistics included in context: {stats}")
 
         # Meilleures options d'achat
         if 'top_k_products' in data:
             top_products = data['top_k_products'][:10]
             context_parts.append("\nMeilleurs choix d'achat (Top 10):")
-
             for i, product in enumerate(top_products, 1):
                 availability_status = "✅ En stock" if product.get('available') else "❌ Rupture de stock"
                 stock_info = f" (Stock: {product.get('stock_quantity', 'N/A')})" if product.get('stock_quantity') else ""
@@ -79,23 +212,28 @@ Options d'achat disponibles:
    - Plateforme: {product.get('platform', 'N/A')}
    - Région: {product.get('store_region', 'N/A')}
                 """)
+            self.logger.debug(f"Top {len(top_products)} products included in context.")
 
         # Analyse par région (utile pour les frais de port)
         if 'geographical_analysis' in data and data['geographical_analysis']:
             geo_data = data['geographical_analysis']
             context_parts.append(f"\nDisponibilité par région: {list(geo_data.keys())}")
+            self.logger.debug(f"Geographical analysis included in context: {list(geo_data.keys())}")
 
         # Analyse des vendeurs (fiabilité)
         if 'shops_analysis' in data and data['shops_analysis']:
             shops_data = data['shops_analysis']
             if 'top_shops' in shops_data:
                 context_parts.append(f"\nVendeurs recommandés: {list(shops_data['top_shops'].keys())[:5]}")
+                self.logger.debug(f"Shop analysis included in context: {list(shops_data['top_shops'].keys())[:5]}")
 
-        return "\n".join(context_parts)
+        final_context = "\n".join(context_parts)
+        self.logger.info("Buyer context prepared.")
+        return final_context
 
     def _get_buyer_analysis_prompt_template(self, analysis_type: str) -> ChatPromptTemplate:
         """Génère le prompt LangChain selon le type d'analyse pour l'acheteur"""
-
+        self.logger.info(f"Generating prompt template for analysis type: {analysis_type}")
         system_message_content = "Tu es un expert en conseil d'achat et comparaison de produits. Tu aides les clients à faire les meilleurs choix d'achat en analysant les produits disponibles, leurs prix, leur qualité et leur rapport qualité-prix."
 
         base_template = """
@@ -168,6 +306,12 @@ Focus sur la disponibilité et l'urgence d'achat.
         """
         Analyse des produits du point de vue d'un acheteur en utilisant LangChain.
         """
+        self.declare_intention(f"Performing LLM analysis for buyer with analysis type: {analysis_type}")
+        
+        # Vérification des permissions pour l'accès au LLM
+        if not self.request_access("GroqLLM", "invoke"):
+            return "Accès au LLM refusé en raison des permissions."
+
         context = self._prepare_buyer_context(products_data, analysis_type)
         prompt_template = self._get_buyer_analysis_prompt_template(analysis_type)
 
@@ -182,14 +326,23 @@ Focus sur la disponibilité et l'urgence d'achat.
         try:
             # Exécution de la chaîne LangChain
             response_content = analysis_chain.invoke(context)
+            self.logger.info("LLM analysis completed successfully.")
+            self.logger.debug(f"LLM response: {response_content[:200]}...") # Log beginning of response
             return response_content
         except Exception as e:
+            self.logger.error(f"Error during LangChain analysis: {str(e)}", exc_info=True)
             return f"Erreur lors de l'analyse LangChain: {str(e)}"
 
     def get_conversational_chain(self) -> Any:
         """
         Retourne une chaîne conversationnelle LangChain pour un chat interactif.
         """
+        self.declare_intention("Creating conversational LangChain chain.")
+        # Vérification des permissions pour l'accès au LLM
+        if not self.request_access("GroqLLM", "invoke"):
+            self.logger.error("Failed to create conversational chain: LLM access denied.")
+            return None # Ou lever une erreur spécifique
+
         # Le prompt inclut un historique de messages pour le contexte conversationnel
         conversational_prompt = ChatPromptTemplate.from_messages([
             ("system", "Tu es un assistant d'achat intelligent. Tu réponds aux questions des utilisateurs sur les produits, les prix et les meilleurs choix en te basant sur les données de produits que tu as reçues. Sois concis et utile."),
@@ -203,7 +356,7 @@ Focus sur la disponibilité et l'urgence d'achat.
 
 def display_buyer_analysis_results(top_k_df, df_scored, ai_analysis, analysis_type, llm_data):
     """Affiche les résultats de l'analyse pour l'acheteur"""
-
+    mcp_logger.info("Displaying buyer analysis results.")
     # Analyse IA pour acheteur
     st.markdown("## 🛒 Conseil d'Achat IA")
 
@@ -394,6 +547,7 @@ def display_buyer_analysis_results(top_k_df, df_scored, ai_analysis, analysis_ty
                 if not best_value_products.empty:
                     best_value = best_value_products.loc[(best_value_products['synthetic_score'] / best_value_products['price']).idxmax()]
                     st.success(f"🎯 **Meilleure affaire**: {best_value.iloc[0]['title'][:30]}... à {best_value.iloc[0]['price']:.2f}€")
+                    mcp_logger.info(f"Best deal identified: {best_value.iloc[0]['title']} at {best_value.iloc[0]['price']:.2f}€")
                 else:
                     st.info("Aucune meilleure affaire trouvée (prix non positifs).")
             else:
@@ -407,6 +561,7 @@ def display_buyer_analysis_results(top_k_df, df_scored, ai_analysis, analysis_ty
             low_stock = top_k_df[top_k_df['available'] == False]
             if not low_stock.empty:
                 st.warning(f"⚠️ **{len(low_stock)} produits** en rupture de stock")
+                mcp_logger.warning(f"{len(low_stock)} products identified as out of stock.")
             else:
                 st.info("✅ Tous les produits sont disponibles")
 
@@ -434,7 +589,8 @@ def display_buyer_analysis_results(top_k_df, df_scored, ai_analysis, analysis_ty
             "🛒 Liste d'Achat CSV",
             csv_shopping,
             file_name=f"liste_achat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
+            mime="text/csv",
+            on_click=lambda: mcp_logger.info("Shopping list CSV downloaded.")
         )
 
     with col2:
@@ -460,12 +616,13 @@ Vendeur: {top_k_df.iloc[0]['vendor']}
             "📋 Guide d'Achat",
             buying_guide,
             file_name=f"guide_achat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            mime="text/plain"
+            mime="text/plain",
+            on_click=lambda: mcp_logger.info("Buying guide TXT downloaded.")
         )
 
     with col3:
         # Nouvelle recherche
-        if st.button("🔄 Nouvelle Recherche", use_container_width=True):
+        if st.button("🔄 Nouvelle Recherche", use_container_width=True, on_click=lambda: mcp_logger.info("New search initiated by user.")):
             st.session_state.clear() # Clear session state for a fresh start
             st.rerun()
 
@@ -473,9 +630,11 @@ Vendeur: {top_k_df.iloc[0]['vendor']}
     st.markdown("## 💬 Chat Interactif (LangChain)")
     if "messages" not in st.session_state:
         st.session_state.messages = []
+        mcp_logger.info("Chat history initialized.")
     if "llm_analyzer_chat" not in st.session_state:
         st.session_state.llm_analyzer_chat = BuyerLLMAnalyzer(llm_data.get('api_key')) # Pass API key here
         st.session_state.conversational_chain = st.session_state.llm_analyzer_chat.get_conversational_chain()
+        mcp_logger.info("Conversational chain initialized.")
 
     # Display chat messages from history on app rerun
     for message in st.session_state.messages:
@@ -484,6 +643,7 @@ Vendeur: {top_k_df.iloc[0]['vendor']}
 
     # React to user input
     if prompt := st.chat_input("Posez une question sur les produits..."):
+        mcp_logger.info(f"User input in chat: {prompt}")
         # Display user message in chat message container
         st.chat_message("user").markdown(prompt)
         # Add user message to chat history
@@ -498,17 +658,24 @@ Vendeur: {top_k_df.iloc[0]['vendor']}
                         chat_history_lc.append(HumanMessage(content=msg["content"]))
                     elif msg["role"] == "assistant":
                         chat_history_lc.append(AIMessage(content=msg["content"]))
+                mcp_logger.debug(f"Chat history sent to LLM: {chat_history_lc}")
 
                 # Invoke the conversational chain
-                response = st.session_state.conversational_chain.invoke({
-                    "question": prompt,
-                    "chat_history": chat_history_lc
-                })
-                with st.chat_message("assistant"):
-                    st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+                if st.session_state.conversational_chain: # Check if chain was successfully initialized
+                    response = st.session_state.conversational_chain.invoke({
+                        "question": prompt,
+                        "chat_history": chat_history_lc
+                    })
+                    with st.chat_message("assistant"):
+                        st.markdown(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    mcp_logger.info("LLM chat response received.")
+                else:
+                    st.warning("Le service de chat n'est pas disponible (problème de permissions ou d'initialisation).")
+                    mcp_logger.error("Conversational chain not initialized, cannot process chat prompt.")
             except Exception as e:
                 st.error(f"Erreur lors du chat avec l'IA: {str(e)}")
+                mcp_logger.error(f"Error during LLM chat: {str(e)}", exc_info=True)
 
 
 def show_buyer_analysis_page():
@@ -516,6 +683,7 @@ def show_buyer_analysis_page():
 
     st.title("🛒 Assistant d'Achat Intelligent")
     st.markdown("Trouvez les meilleurs produits à acheter avec l'aide de l'IA")
+    mcp_logger.info("Buyer analysis page loaded.")
 
     # Vérifications préalables
     if not ANALYZER_AVAILABLE:
@@ -536,6 +704,9 @@ def show_buyer_analysis_page():
 
         if groq_api_key:
             os.environ["GROQ_API_KEY"] = groq_api_key
+            mcp_logger.info("Groq API key set from user input.")
+        else:
+            mcp_logger.warning("Groq API key is not set.")
 
         st.markdown("---")
 
@@ -550,6 +721,7 @@ def show_buyer_analysis_page():
                 "urgency": "⚡ Achat urgent"
             }[x]
         )
+        mcp_logger.info(f"Analysis type selected: {analysis_type}")
 
         st.markdown("---")
 
@@ -558,15 +730,19 @@ def show_buyer_analysis_page():
 
         # Budget maximum
         max_budget = st.number_input("Budget maximum (€)", min_value=0, value=500, step=10)
+        mcp_logger.info(f"Max budget set: {max_budget}€")
 
         # Nombre de produits à analyser
         k = st.slider("Nombre de produits à comparer", 5, 30, 15)
+        mcp_logger.info(f"Number of products to compare (k): {k}")
 
         # Priorités personnelles
         st.markdown("#### Vos priorités")
         price_importance = st.slider("Importance du prix", 0.0, 1.0, 0.4, 0.05)
         quality_importance = st.slider("Importance de la qualité", 0.0, 1.0, 0.35, 0.05)
         availability_importance = st.slider("Importance de la disponibilité", 0.0, 1.0, 0.25, 0.05)
+        mcp_logger.info(f"User priorities - Price: {price_importance}, Quality: {quality_importance}, Availability: {availability_importance}")
+
 
     if not groq_api_key:
         st.warning("⚠️ Veuillez configurer votre clé API Groq dans la sidebar")
@@ -586,6 +762,7 @@ def show_buyer_analysis_page():
             index=0,
             help="Peut affecter les frais de port"
         )
+        mcp_logger.info(f"Preferred region: {preferred_region}")
 
         # Disponibilité
         stock_preference = st.radio(
@@ -593,6 +770,7 @@ def show_buyer_analysis_page():
             ["Tous les produits", "En stock seulement", "Stock élevé seulement"],
             index=1
         )
+        mcp_logger.info(f"Stock preference: {stock_preference}")
 
         # Gamme de prix
         if max_budget > 0:
@@ -604,20 +782,22 @@ def show_buyer_analysis_page():
             )
         else:
             price_range = (0, 1000)
+        mcp_logger.info(f"Selected price range: {price_range}")
 
     with col1:
         st.markdown("### 🎯 Recherche de Produits")
 
         # Bouton de recherche
         if st.button("🔍 Trouver les Meilleurs Produits", type="primary", use_container_width=True):
-
+            mcp_logger.info("User clicked 'Find Best Products' button.")
             with st.spinner("Recherche des meilleures options d'achat..."):
                 try:
-                    # Initialiser l'analyseur
-                    analyzer = ProductAnalyzer()
+                    # Initialiser le ProductDataServer (votre MCPServer pour les données)
+                    product_data_server = ProductDataServer()
 
-                    if analyzer.client is None:
-                        st.error("❌ Connexion base de données impossible")
+                    if product_data_server.client is None: # Vérifier la connexion de l'analyseur sous-jacent
+                        st.error("❌ Connexion base de données impossible (via ProductDataServer)")
+                        mcp_logger.critical("Database connection to ProductAnalyzer (via ProductDataServer) failed.")
                         return
 
                     # Construire les filtres
@@ -632,7 +812,6 @@ def show_buyer_analysis_page():
                         if 'available' not in filters:
                             filters['available'] = True
 
-
                     # Filtre de région
                     if preferred_region != "Toutes":
                         filters['store_region'] = preferred_region
@@ -645,6 +824,7 @@ def show_buyer_analysis_page():
                         if price_range[1] < max_budget:
                             price_filter["$lte"] = price_range[1]
                         filters['price'] = price_filter
+                    mcp_logger.info(f"Filters applied for product search: {filters}")
 
                     # Critères orientés acheteur
                     criteria = {
@@ -657,25 +837,53 @@ def show_buyer_analysis_page():
                         },
                         'price_preference': 'low'  # Les acheteurs préfèrent les prix bas
                     }
+                    mcp_logger.info(f"Buyer criteria for scoring: {criteria}")
 
-                    # Obtenir les données
+                    # --- Utilisation des outils via le MCPServer ---
+                    # Vérification des permissions avant d'appeler les outils du serveur
+                    buyer_llm_analyzer_instance = BuyerLLMAnalyzer(groq_api_key) # Créer une instance pour vérifier les permissions
+                    
                     st.info("📊 Recherche de produits...")
-                    df = analyzer.get_products_dataframe(filters)
+                    if not buyer_llm_analyzer_instance.request_access("ProductAnalyzer", "get_products_dataframe"):
+                        st.error("Accès à la fonction de récupération des produits refusé.")
+                        return
+                    df = product_data_server.execute_tool("get_products_dataframe", filters)
+                    mcp_logger.info(f"Found {len(df)} products from database via ProductDataServer.")
 
                     if df.empty:
                         st.warning("Aucun produit trouvé avec ces critères. Essayez d'élargir votre recherche.")
+                        mcp_logger.warning("No products found with the applied filters.")
                         return
 
-                    # Calculer les scores
                     st.info("🧮 Évaluation des options...")
-                    df_scored = analyzer.calculate_synthetic_score(df, criteria)
+                    if not buyer_llm_analyzer_instance.request_access("ProductAnalyzer", "calculate_synthetic_score"):
+                        st.error("Accès à la fonction de calcul de score refusé.")
+                        return
+                    df_scored = product_data_server.execute_tool("calculate_synthetic_score", df, criteria)
+                    mcp_logger.info("Synthetic scores calculated for products via ProductDataServer.")
 
-                    # Sélectionner les meilleures options
-                    top_k_df = analyzer.get_top_k_products(df_scored, k, 'synthetic_score')
+                    if not buyer_llm_analyzer_instance.request_access("ProductAnalyzer", "get_top_k_products"):
+                        st.error("Accès à la fonction de sélection des meilleurs produits refusé.")
+                        return
+                    top_k_df = product_data_server.execute_tool("get_top_k_products", df_scored, k, 'synthetic_score')
+                    mcp_logger.info(f"Selected top {len(top_k_df)} products via ProductDataServer.")
 
                     # Analyses supplémentaires
-                    geo_analysis = analyzer.analyze_by_geography(df_scored)
-                    shops_analysis = analyzer.analyze_shops_ranking(df_scored)
+                    if not buyer_llm_analyzer_instance.request_access("ProductAnalyzer", "analyze_by_geography"):
+                        st.warning("Accès à l'analyse géographique refusé. L'analyse sera limitée.")
+                        geo_analysis = {}
+                    else:
+                        geo_analysis = product_data_server.execute_tool("analyze_by_geography", df_scored)
+                    
+                    if not buyer_llm_analyzer_instance.request_access("ProductAnalyzer", "analyze_shops_ranking"):
+                        st.warning("Accès à l'analyse des vendeurs refusé. L'analyse sera limitée.")
+                        shops_analysis = {}
+                    else:
+                        shops_analysis = product_data_server.execute_tool("analyze_shops_ranking", df_scored)
+                    
+                    mcp_logger.info("Additional geographical and shop analyses performed via ProductDataServer.")
+                    # --- Fin Utilisation des outils via le MCPServer ---
+
 
                     # Préparer les données pour l'analyse IA
                     llm_data = {
@@ -711,18 +919,20 @@ def show_buyer_analysis_page():
                             'store_region': row.get('store_region', '')
                         }
                         llm_data['top_k_products'].append(product_data)
+                    mcp_logger.info("Data prepared for LLM analysis.")
 
-                    # Analyse IA pour l'acheteur
+                    # Analyse IA pour l'acheteur (via BuyerLLMAnalyzer, qui est un MCPClient)
                     st.info("🤖 Génération des conseils d'achat...")
-                    llm_analyzer = BuyerLLMAnalyzer(groq_api_key)
-                    ai_analysis = llm_analyzer.analyze_for_buyer(llm_data, analysis_type)
+                    # Utiliser l'instance déjà créée pour vérifier les permissions LLM
+                    ai_analysis = buyer_llm_analyzer_instance.analyze_for_buyer(llm_data, analysis_type)
 
                     # Affichage des résultats pour l'acheteur
                     display_buyer_analysis_results(top_k_df, df_scored, ai_analysis, analysis_type, llm_data)
+                    mcp_logger.info("Buyer analysis results displayed.")
 
                 except Exception as e:
                     st.error(f"❌ Erreur lors de la recherche: {str(e)}")
-                    st.exception(e)
+                    mcp_logger.error(f"Error during product search and analysis: {str(e)}", exc_info=True)
 
 # Fonction utilitaire pour l'utilisation externe
 def run_buyer_analysis():
@@ -730,4 +940,5 @@ def run_buyer_analysis():
     show_buyer_analysis_page()
 
 if __name__ == "__main__":
-    run_buyer_analysis()
+    app_host = MCPHost("BuyerAssistantApp")
+    app_host.run(run_buyer_analysis)
