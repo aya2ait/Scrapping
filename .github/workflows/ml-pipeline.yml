@@ -1,3 +1,4 @@
+
 name: E-commerce ML Pipeline
 
 on:
@@ -20,30 +21,32 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Initialize git submodules
+      run: |
+        git submodule update --init --recursive || echo "No submodules to initialize"
+    
     - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
         
+    - name: Handle permission errors gracefully
+      run: |
+        echo "Setting up permissions..."
+        chmod -R u+w . || true
+        ls -la
+        
     - name: Install Chrome and ChromeDriver
       run: |
-        # Install Chrome
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
         echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
+        sudo apt-get install -y google-chrome-stable chromium-chromedriver
         
-        # Install ChromeDriver using newer method
-        sudo apt-get install -y chromium-chromedriver
-        
-        # Verify installation
-        google-chrome --version
-        chromedriver --version
-        
-    - name: Create basic requirements.txt if missing
+    - name: Create requirements.txt if missing
       run: |
         if [ ! -f requirements.txt ]; then
-          echo "Creating basic requirements.txt..."
+          echo "Creating requirements.txt..."
           cat > requirements.txt << EOF
         pandas>=1.5.0
         numpy>=1.21.0
@@ -63,11 +66,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
-    - name: Create orchestration.py if missing
+    - name: Fix orchestration.py paths
       run: |
-        if [ ! -f orchestration.py ]; then
-          echo "Creating basic orchestration.py..."
-          cat > orchestration.py << 'EOF'
+        echo "Checking orchestration.py..."
+        if [ -f orchestration.py ]; then
+          # Fix Windows paths in orchestration.py
+          sed -i 's|/C:|.|g' orchestration.py
+          sed -i 's|\\\\|/|g' orchestration.py
+          echo "Fixed paths in orchestration.py"
+        else
+          echo "Creating fixed orchestration.py..."
+          cat > orchestration.py << 'PYEOF'
         #!/usr/bin/env python3
         import sys
         import os
@@ -83,12 +92,12 @@ jobs:
             
             print(f"🚀 Starting E-commerce ML Pipeline at {datetime.now()}")
             print(f"📝 Arguments: {args}")
+            print(f"📁 Working directory: {os.getcwd()}")
             
-            # Create data directory
+            # Create data directories with proper Linux paths
             os.makedirs('data', exist_ok=True)
             os.makedirs('mlruns', exist_ok=True)
             
-            # Generate sample data for demo
             print("📊 Generating sample product data...")
             sample_data = {
                 'product_id': range(1, 101),
@@ -101,7 +110,7 @@ jobs:
             
             df = pd.DataFrame(sample_data)
             
-            # Save results
+            # Use relative paths
             output_path = 'data/unified_extracted_products.csv'
             df.to_csv(output_path, index=False)
             print(f"✅ Results saved to {output_path}")
@@ -117,13 +126,31 @@ jobs:
             
         if __name__ == "__main__":
             main()
-        EOF
+        PYEOF
           chmod +x orchestration.py
         fi
         
+    - name: Check MongoDB service status
+      run: |
+        echo "Checking MongoDB connection..."
+        timeout 30 bash -c 'until nc -z localhost 27017; do sleep 1; done'
+        echo "MongoDB is ready!"
+        
     - name: Run extraction and storage steps
       run: |
+        echo "Starting pipeline execution..."
         python orchestration.py --skip-api
+        echo "Pipeline execution completed!"
+        
+    - name: Verify output files
+      run: |
+        echo "Checking generated files..."
+        ls -la data/ || echo "No data directory"
+        ls -la mlruns/ || echo "No mlruns directory"
+        if [ -f data/unified_extracted_products.csv ]; then
+          echo "✅ CSV file created successfully"
+          head -5 data/unified_extracted_products.csv
+        fi
         
     - name: Upload extraction results
       uses: actions/upload-artifact@v4
@@ -136,3 +163,4 @@ jobs:
       with:
         name: mlflow-artifacts
         path: mlruns/
+EOF
