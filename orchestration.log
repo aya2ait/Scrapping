@@ -193,3 +193,13 @@ UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in posit
 UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
 
 2025-06-07 17:18:30,081 - Orchestration - ERROR - Storage failed, stopping pipeline
+2025-06-07 17:19:30,238 - Orchestration - INFO - Setting up environment...
+2025-06-07 17:19:30,240 - Orchestration - INFO - Created output directory: data
+2025-06-07 17:19:30,258 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 17:19:31,018 - Orchestration - INFO - Starting data extraction...
+2025-06-07 17:21:12,323 - Orchestration - INFO - Extraction completed successfully in 101.08 seconds
+2025-06-07 17:21:12,338 - Orchestration - INFO - Starting data storage in MongoDB...
+2025-06-07 17:21:47,473 - Orchestration - INFO - Storage completed successfully in 34.90 seconds
+2025-06-07 17:21:47,490 - Orchestration - INFO - Starting API server for product analysis...
+2025-06-07 17:21:52,611 - Orchestration - INFO - API server started successfully (PID: 20028)
+2025-06-07 17:21:52,645 - Orchestration - INFO - API server is running. Press Ctrl+C to stop.
