@@ -103,11 +103,11 @@ def main():
     # Menu de navigation
     pages = {
         "📊 Vue d'ensemble": "overview",
+        "🔧 Extraction API": "api_extraction",
+        "💾 Export vers une DB": "mongodb_interface",
         "🏆 Top Produits": "top_products", 
         "🌍 Analyse Géographique": "geography",
         "🏪 Classement Boutiques": "shops_ranking",
-        "🔧 Extraction API": "api_extraction",
-        "💾 Export vers une DB": "mongodb_interface",
         "🤖 Modèle IA": "model"
     }
     
@@ -132,16 +132,16 @@ def main():
         try:
             if page_key == "overview":
                 overview.show_page(analyzer)
+            elif page_key == "api_extraction":
+                api_extraction.show_page() 
+            elif page_key == "mongodb_interface":
+                mongodb_interface.show_page()
             elif page_key == "top_products":
                 top_products.show_page(analyzer)
             elif page_key == "geography":
                 geography.show_page(analyzer)
             elif page_key == "shops_ranking":
                 shops_ranking.show_page(analyzer)
-            elif page_key == "api_extraction":
-                api_extraction.show_page() 
-            elif page_key == "mongodb_interface":
-                mongodb_interface.show_page()
             elif page_key == "model":
                 model.run_buyer_analysis()
             else:
