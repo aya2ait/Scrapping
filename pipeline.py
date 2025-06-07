@@ -108,22 +108,19 @@ class A2AAgent(ABC):
             self.driver.quit()
     
     def _init_selenium(self):
-        """Initialize Selenium WebDriver"""
+        """Initialize Selenium WebDriver - Linux Compatible"""
         try:
             chrome_options = Options()
             if self.config.headless:
                 chrome_options.add_argument("--headless")
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--remote-debugging-port=9222")
             chrome_options.add_argument(f"--user-agent={self.config.user_agent}")
             
-            if self.config.chrome_driver_path:
-                self.driver = webdriver.Chrome(
-                    executable_path=self.config.chrome_driver_path,
-                    options=chrome_options
-                )
-            else:
-                self.driver = webdriver.Chrome(options=chrome_options)
+            # Always use system chromedriver for Linux compatibility
+            self.driver = webdriver.Chrome(options=chrome_options)
                 
             self.logger.info("Selenium WebDriver initialized successfully")
         except Exception as e:
@@ -157,6 +154,7 @@ class A2AAgent(ABC):
                 self.logger.error(f"JSON decode error for {url}: {e}")
                 return None
         return None
+
 
 # --- Shopify A2A Agent ---
 class ShopifyA2AAgent(A2AAgent):
@@ -591,7 +589,6 @@ class UnifiedExtractionPipeline:
         try:
             all_products = []
             
-            # Grouper par plateforme pour optimiser
             stores_by_platform = {}
             for store in stores:
                 platform = store.platform.lower()
@@ -599,21 +596,19 @@ class UnifiedExtractionPipeline:
                     stores_by_platform[platform] = []
                 stores_by_platform[platform].append(store)
             
-            # SKIP WOOCOMMERCE STORES IF CONFIGURED
             if self.scraping_config.skip_woocommerce and 'woocommerce' in stores_by_platform:
                 woocommerce_stores = stores_by_platform.pop('woocommerce')
                 self.logger.warning(f"SKIPPING {len(woocommerce_stores)} WooCommerce stores (temporarily disabled)")
                 for store in woocommerce_stores:
                     self.logger.warning(f"SKIPPED: {store.domain} (WooCommerce)")
             
-            # Extraction par plateforme
             for platform, platform_stores in stores_by_platform.items():
                 self.logger.info(f"=== Processing {platform.upper()} stores ===")
                 
                 try:
                     agent = AgentFactory.create_agent(platform, self.scraping_config)
                     
-                    with agent:  # Context manager pour Selenium
+                    with agent:
                         for store in platform_stores:
                             try:
                                 self.logger.info(f"Extracting from {store.domain} ({platform})")
@@ -631,7 +626,6 @@ class UnifiedExtractionPipeline:
                     self.logger.error(f"ERROR: Error with {platform} agent: {e}")
                     continue
             
-            # Sauvegarde et statistiques
             if all_products:
                 self._save_results(all_products, output_file)
                 self._print_extraction_stats(all_products)
@@ -645,9 +639,9 @@ class UnifiedExtractionPipeline:
             raise
     
     def _save_results(self, products: List[ProductData], filename: str):
-        """Sauvegarde les résultats avec métadonnées enrichies"""
+        """Sauvegarde les résultats - Linux Compatible"""
         try:
-            # Create data directory if it doesn't exist
+            # Create data directory using simple path operations
             data_dir = "data"
             if not os.path.exists(data_dir):
                 os.makedirs(data_dir)
@@ -655,26 +649,26 @@ class UnifiedExtractionPipeline:
             
             df = pd.DataFrame([product.to_dict() for product in products])
             
-            # Métadonnées
+            # Add metadata
             df['extraction_timestamp'] = datetime.now().isoformat()
             df['pipeline_version'] = "unified_v1.0"
             df['total_products'] = len(products)
             
-            # Sauvegarde principale dans le dossier data
-            main_file = os.path.join(data_dir, filename)
+            # Use simple string formatting for paths - Linux compatible
+            main_file = f"{data_dir}/{filename}"
             df.to_csv(main_file, index=False, encoding='utf-8')
             self.logger.info(f"SUCCESS: Results saved to {main_file}")
             
-            # Sauvegarde par plateforme dans le dossier data
+            # Platform-specific files
             for platform in df['platform'].unique():
                 platform_df = df[df['platform'] == platform]
-                platform_file = os.path.join(data_dir, f"{platform}_{filename}")
+                platform_file = f"{data_dir}/{platform}_{filename}"
                 platform_df.to_csv(platform_file, index=False, encoding='utf-8')
                 self.logger.info(f"SUCCESS: {platform.title()} results saved to {platform_file}")
             
-            # Backup avec timestamp dans le dossier data
+            # Backup with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = os.path.join(data_dir, f"backup_{timestamp}_{filename}")
+            backup_file = f"{data_dir}/backup_{timestamp}_{filename}"
             df.to_csv(backup_file, index=False, encoding='utf-8')
             self.logger.info(f"SUCCESS: Backup saved to {backup_file}")
             
@@ -692,12 +686,10 @@ class UnifiedExtractionPipeline:
         available_count = 0
         
         for product in products:
-            # Stats par plateforme
             if product.platform not in platforms:
                 platforms[product.platform] = {'total': 0, 'available': 0}
             platforms[product.platform]['total'] += 1
             
-            # Stats par store
             if product.store_domain not in stores:
                 stores[product.store_domain] = {'total': 0, 'available': 0, 'platform': product.platform}
             stores[product.store_domain]['total'] += 1
