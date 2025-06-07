@@ -163,4 +163,3 @@ jobs:
       with:
         name: mlflow-artifacts
         path: mlruns/
-EOF
