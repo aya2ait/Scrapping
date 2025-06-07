@@ -190,36 +190,7 @@ jobs:
             sys.exit(1)
         "
     
-    # ========================================
-    # PIPELINE ORCHESTRATION FIX
-    # ========================================
     
-    - name: 🔧 Fix orchestration.py for Linux compatibility
-      run: |
-        echo "🔧 Ensuring orchestration.py is Linux-compatible..."
-        
-        if [ -f orchestration.py ]; then
-          echo "📝 Found existing orchestration.py, checking compatibility..."
-          
-          # Fix path issues
-          sed -i 's|\\\\|/|g' orchestration.py
-          sed -i 's|os\.path\.join(OUTPUT_DIR, "unified_extracted_products\.csv")|f"{OUTPUT_DIR}/unified_extracted_products.csv"|g' orchestration.py
-          
-          echo "✅ Path fixes applied"
-        else
-          echo "❌ orchestration.py not found!"
-          exit 1
-        fi
-        
-        # Verify file existence
-        echo "📋 Checking required files:"
-        for file in orchestration.py pipeline.py mongo.py topk_analyzer.py; do
-          if [ -f "$file" ]; then
-            echo "✅ $file exists"
-          else
-            echo "⚠️  $file missing"
-          fi
-        done
     
     # ========================================
     # MAIN PIPELINE EXECUTION
