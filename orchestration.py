@@ -18,8 +18,6 @@ import argparse
 import subprocess
 from datetime import datetime
 import mlflow
-import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Configure logging
 logging.basicConfig(
