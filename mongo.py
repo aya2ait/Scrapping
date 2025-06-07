@@ -33,13 +33,13 @@ class ProductsDB:
             self.db = self.client[self.database_name]
             self.collection = self.db[self.collection_name]
             
-            self.logger.info(f"✅ Connected to MongoDB: {self.database_name}.{self.collection_name}")
+            self.logger.info(f"Connected to MongoDB: {self.database_name}.{self.collection_name}")
             return True
         except ConnectionFailure as e:
-            self.logger.error(f"❌ MongoDB connection failed: {e}")
+            self.logger.error(f"MongoDB connection failed: {e}")
             return False
         except Exception as e:
-            self.logger.error(f"❌ Unexpected error connecting to MongoDB: {e}")
+            self.logger.error(f"Unexpected error connecting to MongoDB: {e}")
             return False
     
     def create_indexes(self):
@@ -61,10 +61,10 @@ class ProductsDB:
             self.collection.create_index([('store_domain', 1), ('available', 1)])
             self.collection.create_index([('platform', 1), ('price', 1)])
             
-            self.logger.info("✅ Indexes created/verified")
+            self.logger.info("Indexes created/verified")
             return True
         except Exception as e:
-            self.logger.error(f"❌ Index creation failed: {e}")
+            self.logger.error(f"Index creation failed: {e}")
             return False
     
     def clean_product_data(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -160,8 +160,8 @@ class ProductsDB:
             return str(result.inserted_id)
             
         except Exception as e:
-            self.logger.error(f"❌ Product insertion failed: {e}")
-            self.logger.error(f"❌ Product data: {product_data}")
+            self.logger.error(f"Product insertion failed: {e}")
+            self.logger.error(f"Product data: {product_data}")
             return None
     
     def insert_products_batch(self, products: List[Dict[str, Any]], batch_size=1000):
@@ -187,7 +187,7 @@ class ProductsDB:
                         documents.append(cleaned_data)
                         
                     except Exception as e:
-                        self.logger.error(f"❌ Error processing product {i+j+1}: {e}")
+                        self.logger.error(f"Error processing product {i+j+1}: {e}")
                         errors.append(f"Product {i+j+1}: {str(e)}")
                         continue
                 
@@ -198,26 +198,26 @@ class ProductsDB:
                         batch_inserted = len(result.inserted_ids)
                         total_inserted += batch_inserted
                         
-                        print(f"✅ Batch {i//batch_size + 1}: {batch_inserted} products inserted (Total: {total_inserted}/{total_products})")
+                        print(f"Batch {i//batch_size + 1}: {batch_inserted} products inserted (Total: {total_inserted}/{total_products})")
                         
                     except BulkWriteError as bwe:
                         # Handle partial success in bulk operations
                         batch_inserted = bwe.details.get('nInserted', 0)
                         total_inserted += batch_inserted
                         
-                        print(f"⚠️ Batch {i//batch_size + 1}: {batch_inserted} products inserted with some errors")
+                        print(f"Batch {i//batch_size + 1}: {batch_inserted} products inserted with some errors")
                         for error in bwe.details.get('writeErrors', []):
                             errors.append(f"Bulk error: {error.get('errmsg', 'Unknown error')}")
                 
             except Exception as e:
-                self.logger.error(f"❌ Batch insertion failed for batch {i//batch_size + 1}: {e}")
+                self.logger.error(f"Batch insertion failed for batch {i//batch_size + 1}: {e}")
                 errors.append(f"Batch {i//batch_size + 1}: {str(e)}")
                 continue
         
         if errors:
-            self.logger.warning(f"⚠️ {len(errors)} errors occurred during insertion")
+            self.logger.warning(f"{len(errors)} errors occurred during insertion")
             
-        self.logger.info(f"✅ {total_inserted} products inserted successfully out of {total_products}")
+        self.logger.info(f"{total_inserted} products inserted successfully out of {total_products}")
         return total_inserted
     
     def get_products_count(self):
@@ -225,7 +225,7 @@ class ProductsDB:
         try:
             return self.collection.count_documents({})
         except Exception as e:
-            self.logger.error(f"❌ Count query failed: {e}")
+            self.logger.error(f"Count query failed: {e}")
             return 0
     
     def get_products_by_store(self, store_domain: str):
@@ -238,7 +238,7 @@ class ProductsDB:
                 product['_id'] = str(product['_id'])
             return products
         except Exception as e:
-            self.logger.error(f"❌ Store query failed: {e}")
+            self.logger.error(f"Store query failed: {e}")
             return []
     
     def get_available_products(self):
@@ -251,7 +251,7 @@ class ProductsDB:
                 product['_id'] = str(product['_id'])
             return products
         except Exception as e:
-            self.logger.error(f"❌ Available products query failed: {e}")
+            self.logger.error(f"Available products query failed: {e}")
             return []
     
     def get_products_by_price_range(self, min_price: float, max_price: float):
@@ -265,7 +265,7 @@ class ProductsDB:
                 product['_id'] = str(product['_id'])
             return products
         except Exception as e:
-            self.logger.error(f"❌ Price range query failed: {e}")
+            self.logger.error(f"Price range query failed: {e}")
             return []
     
     def search_products(self, search_term: str, limit=100):
@@ -354,7 +354,7 @@ class ProductsDB:
             return stats
             
         except Exception as e:
-            self.logger.error(f"❌ Stats query failed: {e}")
+            self.logger.error(f"Stats query failed: {e}")
             return {'error': str(e)}
     
     def export_to_csv(self, output_file='exported_products.csv', limit=None):
@@ -367,7 +367,7 @@ class ProductsDB:
             products = list(cursor)
             
             if not products:
-                print("❌ No products found to export")
+                print("No products found to export")
                 return False
             
             # Convert to DataFrame
@@ -385,11 +385,11 @@ class ProductsDB:
                         df[col] = df[col].astype(str)
             
             df.to_csv(output_file, index=False)
-            print(f"✅ {len(products)} products exported to {output_file}")
+            print(f"{len(products)} products exported to {output_file}")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Export failed: {e}")
+            self.logger.error(f"Export failed: {e}")
             return False
     
     def backup_collection(self, backup_file='backup_products.json'):
@@ -409,56 +409,56 @@ class ProductsDB:
             with open(backup_file, 'w', encoding='utf-8') as f:
                 json.dump(products, f, indent=2, ensure_ascii=False)
             
-            print(f"✅ {len(products)} products backed up to {backup_file}")
+            print(f"{len(products)} products backed up to {backup_file}")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Backup failed: {e}")
+            self.logger.error(f"Backup failed: {e}")
             return False
     
     def close(self):
         """Close database connection"""
         if self.client:
             self.client.close()
-            self.logger.info("🔌 MongoDB connection closed")
+            self.logger.info("MongoDB connection closed")
 
 # === UTILITY FUNCTIONS ===
 
 def analyze_csv_structure(csv_file: str):
     """Analyze CSV structure to understand the data"""
     try:
-        print(f"🔍 Analyzing CSV structure: {csv_file}")
+        print(f"Analyzing CSV structure: {csv_file}")
         df = pd.read_csv(csv_file)
         
-        print(f"📊 Total rows: {len(df)}")
-        print(f"📊 Total columns: {len(df.columns)}")
-        print(f"📊 Columns: {list(df.columns)}")
+        print(f"Total rows: {len(df)}")
+        print(f"Total columns: {len(df.columns)}")
+        print(f"Columns: {list(df.columns)}")
         
         # Check for NaN values
-        print(f"\n🔍 NaN values per column:")
+        print(f"\nNaN values per column:")
         nan_summary = []
         for col in df.columns:
             nan_count = df[col].isna().sum()
             if nan_count > 0:
-                nan_summary.append(f"  • {col}: {nan_count} NaN values")
+                nan_summary.append(f"  - {col}: {nan_count} NaN values")
         
         if nan_summary:
             print('\n'.join(nan_summary))
         else:
-            print("  • No NaN values found!")
+            print("  - No NaN values found!")
         
         # Sample data
-        print(f"\n📝 First 3 rows:")
+        print(f"\nFirst 3 rows:")
         for i in range(min(3, len(df))):
             print(f"\nRow {i+1}:")
             for col in df.columns:
                 value = df.iloc[i][col]
-                print(f"  • {col}: {value} (type: {type(value)})")
+                print(f"  - {col}: {value} (type: {type(value)})")
         
         return df
         
     except Exception as e:
-        print(f"❌ CSV analysis failed: {e}")
+        print(f"CSV analysis failed: {e}")
         return None
 
 def store_csv_to_database(csv_file: str, connection_string='mongodb://localhost:27017/', 
@@ -475,53 +475,53 @@ def store_csv_to_database(csv_file: str, connection_string='mongodb://localhost:
             return False
         
         # Convert to records
-        print(f"\n💾 Converting to records...")
+        print(f"\nConverting to records...")
         products = df.to_dict('records')
-        print(f"📊 Found {len(products)} products in CSV")
+        print(f"Found {len(products)} products in CSV")
         
         # Connect to database
-        print(f"\n🔌 Connecting to MongoDB...")
+        print(f"\nConnecting to MongoDB...")
         db = ProductsDB(connection_string, database_name, collection_name)
         if not db.connect():
-            print("❌ Failed to connect to MongoDB")
-            print("💡 Make sure MongoDB is running: mongod")
+            print("Failed to connect to MongoDB")
+            print("Make sure MongoDB is running: mongod")
             return False
             
         # Create indexes
-        print(f"🏗️ Creating indexes...")
+        print(f"Creating indexes...")
         db.create_indexes()
         
         # Insert products
-        print("💾 Storing products to MongoDB...")
+        print("Storing products to MongoDB...")
         inserted = db.insert_products_batch(products, batch_size=1000)
         
         # Show stats
-        print(f"\n📊 Getting final statistics...")
+        print(f"\nGetting final statistics...")
         stats = db.get_stats()
-        print(f"\n🎉 Storage completed!")
-        print(f"📊 Total products in database: {stats.get('total_products', 0)}")
-        print(f"✅ Available products: {stats.get('available_products', 0)}")
-        print(f"📈 Successfully inserted: {inserted} out of {len(products)}")
-        print(f"💾 Collection size: {stats.get('collection_size_mb', 0)} MB")
-        print(f"🔍 Index size: {stats.get('index_size_mb', 0)} MB")
+        print(f"\nStorage completed!")
+        print(f"Total products in database: {stats.get('total_products', 0)}")
+        print(f"Available products: {stats.get('available_products', 0)}")
+        print(f"Successfully inserted: {inserted} out of {len(products)}")
+        print(f"Collection size: {stats.get('collection_size_mb', 0)} MB")
+        print(f"Index size: {stats.get('index_size_mb', 0)} MB")
         
         if stats.get('by_platform'):
-            print("\n📈 By Platform:")
+            print("\nBy Platform:")
             for platform, count in stats['by_platform'].items():
-                print(f"  • {platform}: {count} products")
+                print(f"  - {platform}: {count} products")
         
         if stats.get('price_stats'):
             price_stats = stats['price_stats']
-            print(f"\n💰 Price Statistics:")
-            print(f"  • Average: ${price_stats.get('average', 0)}")
-            print(f"  • Min: ${price_stats.get('minimum', 0)}")
-            print(f"  • Max: ${price_stats.get('maximum', 0)}")
+            print(f"\nPrice Statistics:")
+            print(f"  - Average: ${price_stats.get('average', 0)}")
+            print(f"  - Min: ${price_stats.get('minimum', 0)}")
+            print(f"  - Max: ${price_stats.get('maximum', 0)}")
         
         db.close()
         return True
         
     except Exception as e:
-        print(f"❌ Storage failed: {e}")
+        print(f"Storage failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -584,93 +584,93 @@ def quick_database_setup():
     ]
     
     try:
-        print("🚀 Setting up test MongoDB database...")
+        print("Setting up test MongoDB database...")
         
         db = ProductsDB('mongodb://localhost:27017/', 'test_products_db', 'products')
         if not db.connect():
-            print("❌ Failed to connect to MongoDB")
-            print("💡 Make sure MongoDB is running!")
+            print("Failed to connect to MongoDB")
+            print("Make sure MongoDB is running!")
             return
             
         db.create_indexes()
         inserted = db.insert_products_batch(sample_products)
         
-        print(f"✅ {inserted} test products inserted")
+        print(f"{inserted} test products inserted")
         
         # Show stats
         stats = db.get_stats()
-        print(f"📊 Database stats:")
+        print(f"Database stats:")
         for key, value in stats.items():
-            print(f"  • {key}: {value}")
+            print(f"  - {key}: {value}")
         
         # Test search
-        print(f"\n🔍 Testing search for 'headphones':")
+        print(f"\nTesting search for 'headphones':")
         results = db.search_products('headphones')
         print(f"Found {len(results)} results")
         
         db.close()
         
     except Exception as e:
-        print(f"❌ Setup failed: {e}")
+        print(f"Setup failed: {e}")
 
 # === USAGE EXAMPLES ===
 
 if __name__ == "__main__":
     
-    # Fichier CSV généré par ton script d'extraction
-    csv_file = 'unified_extracted_products.csv'
+    # CSV file generated by your extraction script
+    csv_file = 'data/unified_extracted_products.csv'
     
-    # Configuration MongoDB
+    # MongoDB configuration
     connection_string = 'mongodb://localhost:27017/'  # Default local MongoDB
     database_name = 'products_db'
     collection_name = 'products'
     
-    print("🚀 Stockage des produits extraits en MongoDB...")
+    print("Storing extracted products in MongoDB...")
     print("=" * 60)
     
-    # Vérifier si le fichier CSV existe
+    # Check if CSV file exists
     if os.path.exists(csv_file):
-        print(f"📖 Fichier trouvé: {csv_file}")
+        print(f"File found: {csv_file}")
         
-        # Stocker les VRAIS produits extraits
+        # Store the REAL extracted products
         success = store_csv_to_database(csv_file, connection_string, database_name, collection_name)
         
         if success:
-            print("\n🎉 STOCKAGE TERMINÉ AVEC SUCCÈS !")
-            print(f"🗄️ Base de données: {database_name}")
-            print(f"📚 Collection: {collection_name}")
+            print("\nSTORAGE COMPLETED SUCCESSFULLY!")
+            print(f"Database: {database_name}")
+            print(f"Collection: {collection_name}")
             
             # Quick query examples
-            print("\n🔍 Tests rapides:")
+            print("\nQuick tests:")
             db = ProductsDB(connection_string, database_name, collection_name)
             if db.connect():
-                print(f"• Total produits: {db.get_products_count()}")
+                print(f"- Total products: {db.get_products_count()}")
                 
                 # Test search
                 search_results = db.search_products('test', limit=5)
-                print(f"• Recherche 'test': {len(search_results)} résultats")
+                print(f"- Search 'test': {len(search_results)} results")
                 
                 db.close()
         else:
-            print("\n❌ Erreur lors du stockage")
+            print("\nError during storage")
     else:
-        print(f"❌ Fichier CSV non trouvé: {csv_file}")
-        print("💡 Assure-toi d'avoir lancé le script d'extraction d'abord !")
-        print("\n🧪 Lancement du test avec des données de démonstration...")
+        print(f"CSV file not found: {csv_file}")
+        print("Make sure you've run the extraction script first!")
+        print("\nRunning test with demo data...")
         quick_database_setup()
     
     print("\n" + "="*60)
-    print("🎯 INSTALLATION ET UTILISATION:")
+    print("INSTALLATION AND USAGE:")
     print("="*60)
-    print("1. Installer MongoDB: https://www.mongodb.com/try/download/community")
-    print("2. Installer pymongo: pip install pymongo")
-    print("3. Démarrer MongoDB: mongod")
-    print("4. Utiliser: store_csv_to_database('ton_fichier.csv')")
+    print("1. Install MongoDB: https://www.mongodb.com/try/download/community")
+    print("2. Install pymongo: pip install pymongo")
+    print("3. Start MongoDB: mongod")
+    print("4. Use: store_csv_to_database('your_file.csv')")
     print("="*60)
-    print("🌟 AVANTAGES MONGODB:")
-    print("• Pas de limite d'espace (extensible)")
-    print("• Recherche texte intégrée")
-    print("• Requêtes complexes avec aggregation")
-    print("• Données flexibles (pas de schéma fixe)")
-    print("• Très rapide pour les gros volumes")
+    print("MONGODB ADVANTAGES:")
+    print("- No space limit (scalable)")
+    print("- Built-in text search")
+    print("- Complex queries with aggregation")
+    print("- Flexible data (no fixed schema)")
+    print("- Very fast for large volumes")
     print("="*60)

@@ -1,0 +1,195 @@
+2025-06-07 16:10:23,180 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:10:23,181 - Orchestration - INFO - Created output directory: data
+2025-06-07 16:10:23,226 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:10:24,018 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:10:24,019 - Orchestration - ERROR - Unexpected error during extraction: Run with UUID f54b3187655748d98da6cdaf48a6dc00 is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+2025-06-07 16:10:24,032 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:11:36,022 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:11:36,040 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:11:36,902 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:11:36,903 - Orchestration - ERROR - Unexpected error during extraction: Run with UUID 97346b2aa0774dd59ff256f30fc1696d is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+2025-06-07 16:11:36,914 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:12:34,893 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:12:34,917 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:12:35,912 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:12:39,395 - Orchestration - ERROR - Extraction failed with exit code 1
+2025-06-07 16:12:39,396 - Orchestration - ERROR - Error output: Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 757, in <module>
+    print("\U0001f680 Starting Unified A2A Extraction Pipeline...")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 794, in <module>
+    print(f"\n\u274c Extraction failed: {e}")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 2: character maps to <undefined>
+
+2025-06-07 16:12:39,404 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:13:33,218 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:13:33,263 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:13:34,302 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:13:37,892 - Orchestration - ERROR - Extraction failed with exit code 1
+2025-06-07 16:13:37,892 - Orchestration - ERROR - Error output: Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 757, in <module>
+    print("\U0001f680 Starting Unified A2A Extraction Pipeline...")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 794, in <module>
+    print(f"\n\u274c Extraction failed: {e}")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 2: character maps to <undefined>
+
+2025-06-07 16:13:37,900 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:14:42,143 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:14:42,163 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:14:43,213 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:14:46,516 - Orchestration - ERROR - Extraction failed with exit code 1
+2025-06-07 16:14:46,517 - Orchestration - ERROR - Error output: Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 757, in <module>
+    print("\U0001f680 Starting Unified A2A Extraction Pipeline...")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 794, in <module>
+    print(f"\n\u274c Extraction failed: {e}")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 2: character maps to <undefined>
+
+2025-06-07 16:14:46,524 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:16:54,345 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:16:54,415 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:16:55,555 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:16:59,120 - Orchestration - ERROR - Extraction failed with exit code 1
+2025-06-07 16:16:59,121 - Orchestration - ERROR - Error output: Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 757, in <module>
+    print("\U0001f680 Starting Unified A2A Extraction Pipeline...")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 794, in <module>
+    print(f"\n\u274c Extraction failed: {e}")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 2: character maps to <undefined>
+
+2025-06-07 16:16:59,129 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:19:51,903 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:19:51,918 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:19:52,679 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:19:55,630 - Orchestration - ERROR - Extraction failed with exit code 1
+2025-06-07 16:19:55,631 - Orchestration - ERROR - Error output: Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 757, in <module>
+    print("\U0001f680 Starting Unified A2A Extraction Pipeline...")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\pipeline.py", line 794, in <module>
+    print(f"\n\u274c Extraction failed: {e}")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 2: character maps to <undefined>
+
+2025-06-07 16:19:55,642 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:29:31,149 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:29:31,178 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:29:31,975 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:31:35,866 - Orchestration - ERROR - Extraction output file not found: data\unified_extracted_products.csv
+2025-06-07 16:31:35,914 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:46:29,297 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:46:29,329 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:46:30,552 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:48:10,136 - Orchestration - ERROR - Extraction output file not found: data\unified_extracted_products.csv
+2025-06-07 16:48:10,165 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:49:14,827 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:51:41,795 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:51:41,817 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:51:42,564 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:53:26,121 - Orchestration - ERROR - Extraction output file not found: unified_extracted_products.csv
+2025-06-07 16:53:26,151 - Orchestration - ERROR - Extraction failed, stopping pipeline
+2025-06-07 16:55:09,862 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:55:09,863 - Orchestration - INFO - Created output directory: data
+2025-06-07 16:55:09,887 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:55:10,802 - Orchestration - INFO - Starting data extraction...
+2025-06-07 16:56:57,177 - Orchestration - INFO - Extraction completed successfully in 106.15 seconds
+2025-06-07 16:56:57,194 - Orchestration - INFO - Starting data storage in MongoDB...
+2025-06-07 16:56:57,195 - Orchestration - ERROR - Unexpected error during storage: Run with UUID 4405c1e26f424002b57649a7f60004fa is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+2025-06-07 16:56:57,203 - Orchestration - ERROR - Storage failed, stopping pipeline
+2025-06-07 16:59:40,739 - Orchestration - INFO - Setting up environment...
+2025-06-07 16:59:40,742 - Orchestration - INFO - Created output directory: data
+2025-06-07 16:59:40,772 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 16:59:41,585 - Orchestration - INFO - Starting data extraction...
+2025-06-07 17:01:25,184 - Orchestration - INFO - Extraction completed successfully in 103.32 seconds
+2025-06-07 17:01:25,219 - Orchestration - INFO - Starting data storage in MongoDB...
+2025-06-07 17:01:27,783 - Orchestration - ERROR - Storage failed with exit code 1
+2025-06-07 17:01:27,784 - Orchestration - ERROR - Error output: Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\mongo.py", line 628, in <module>
+    print("\U0001f680 Stockage des produits extraits en MongoDB...")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
+
+2025-06-07 17:01:27,789 - Orchestration - ERROR - Storage failed, stopping pipeline
+2025-06-07 17:09:30,712 - Orchestration - INFO - Setting up environment...
+2025-06-07 17:09:30,717 - Orchestration - INFO - Created output directory: data
+2025-06-07 17:09:30,747 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 17:09:31,929 - Orchestration - INFO - Starting data extraction...
+2025-06-07 17:11:19,743 - Orchestration - INFO - Extraction completed successfully in 107.53 seconds
+2025-06-07 17:11:19,790 - Orchestration - INFO - Starting data storage in MongoDB...
+2025-06-07 17:11:23,470 - Orchestration - INFO - Storage completed successfully in 3.49 seconds
+2025-06-07 17:11:23,484 - Orchestration - INFO - Starting API server for product analysis...
+2025-06-07 17:11:28,596 - Orchestration - INFO - API server started successfully (PID: 23100)
+2025-06-07 17:11:28,634 - Orchestration - INFO - API server is running. Press Ctrl+C to stop.
+2025-06-07 17:16:27,509 - Orchestration - INFO - Stopping API server...
+2025-06-07 17:16:27,583 - Orchestration - INFO - API server stopped
+2025-06-07 17:16:27,731 - Orchestration - INFO - Pipeline completed successfully!
+2025-06-07 17:16:41,318 - Orchestration - INFO - Setting up environment...
+2025-06-07 17:16:41,321 - Orchestration - INFO - Created output directory: data
+2025-06-07 17:16:41,349 - Orchestration - INFO - MLflow experiment set: e-commerce-ml-pipeline
+2025-06-07 17:16:42,166 - Orchestration - INFO - Starting data extraction...
+2025-06-07 17:18:27,597 - Orchestration - INFO - Extraction completed successfully in 105.17 seconds
+2025-06-07 17:18:27,619 - Orchestration - INFO - Starting data storage in MongoDB...
+2025-06-07 17:18:30,063 - Orchestration - ERROR - Storage failed with exit code 1
+2025-06-07 17:18:30,064 - Orchestration - ERROR - Error output: Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\LSI2TP\DATA_MINING\Scrapping\mongo.py", line 628, in <module>
+    print("\U0001f680 Stockage des produits extraits en MongoDB...")
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0: character maps to <undefined>
+
+2025-06-07 17:18:30,081 - Orchestration - ERROR - Storage failed, stopping pipeline

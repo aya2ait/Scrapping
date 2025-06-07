@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/HP/Desktop/LSI2TP/DATA_MINING/Scrapping/mlruns/986593392433765759/8fb52d1576634065b59c89ffd75fd9f9/artifacts
+end_time: 1749311817181
+entry_point_name: ''
+experiment_id: '986593392433765759'
+lifecycle_stage: active
+run_id: 8fb52d1576634065b59c89ffd75fd9f9
+run_name: data_extraction
+run_uuid: 8fb52d1576634065b59c89ffd75fd9f9
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1749311710830
+status: 3
+tags: []
+user_id: HP

@@ -32,6 +32,7 @@ class ScrapingConfig:
     use_selenium: bool = False  # Pour les sites nécessitant JavaScript
     headless: bool = True
     chrome_driver_path: Optional[str] = None
+    skip_woocommerce: bool = True  # NEW: Skip WooCommerce for now
 
 @dataclass
 class StoreConfig:
@@ -276,10 +277,16 @@ class ShopifyA2AAgent(A2AAgent):
 
 # --- WooCommerce A2A Agent ---
 class WooCommerceA2AAgent(A2AAgent):
-    """Agent A2A spécialisé pour WooCommerce"""
+    """Agent A2A spécialisé pour WooCommerce - TEMPORARILY DISABLED"""
     
     def extract_data(self, store_config: StoreConfig) -> List[ProductData]:
         """Extrait les données produits d'un store WooCommerce"""
+        
+        # SKIP WOOCOMMERCE FOR NOW
+        if self.config.skip_woocommerce:
+            self.logger.warning(f"SKIPPING WooCommerce extraction for {store_config.domain} (temporarily disabled)")
+            return []
+        
         self.logger.info(f"Starting WooCommerce extraction for {store_config.domain}")
         
         if store_config.api_credentials:
@@ -592,6 +599,13 @@ class UnifiedExtractionPipeline:
                     stores_by_platform[platform] = []
                 stores_by_platform[platform].append(store)
             
+            # SKIP WOOCOMMERCE STORES IF CONFIGURED
+            if self.scraping_config.skip_woocommerce and 'woocommerce' in stores_by_platform:
+                woocommerce_stores = stores_by_platform.pop('woocommerce')
+                self.logger.warning(f"SKIPPING {len(woocommerce_stores)} WooCommerce stores (temporarily disabled)")
+                for store in woocommerce_stores:
+                    self.logger.warning(f"SKIPPED: {store.domain} (WooCommerce)")
+            
             # Extraction par plateforme
             for platform, platform_stores in stores_by_platform.items():
                 self.logger.info(f"=== Processing {platform.upper()} stores ===")
@@ -605,16 +619,16 @@ class UnifiedExtractionPipeline:
                                 self.logger.info(f"Extracting from {store.domain} ({platform})")
                                 products = agent.extract_data(store)
                                 all_products.extend(products)
-                                self.logger.info(f"✅ {store.domain}: {len(products)} products extracted")
+                                self.logger.info(f"SUCCESS: {store.domain}: {len(products)} products extracted")
                                 
                                 time.sleep(self.scraping_config.delay_between_domains)
                                 
                             except Exception as e:
-                                self.logger.error(f"❌ Error extracting from {store.domain}: {e}")
+                                self.logger.error(f"ERROR: Error extracting from {store.domain}: {e}")
                                 continue
                                 
                 except Exception as e:
-                    self.logger.error(f"❌ Error with {platform} agent: {e}")
+                    self.logger.error(f"ERROR: Error with {platform} agent: {e}")
                     continue
             
             # Sauvegarde et statistiques
@@ -633,6 +647,12 @@ class UnifiedExtractionPipeline:
     def _save_results(self, products: List[ProductData], filename: str):
         """Sauvegarde les résultats avec métadonnées enrichies"""
         try:
+            # Create data directory if it doesn't exist
+            data_dir = "data"
+            if not os.path.exists(data_dir):
+                os.makedirs(data_dir)
+                self.logger.info(f"Created directory: {data_dir}")
+            
             df = pd.DataFrame([product.to_dict() for product in products])
             
             # Métadonnées
@@ -640,24 +660,26 @@ class UnifiedExtractionPipeline:
             df['pipeline_version'] = "unified_v1.0"
             df['total_products'] = len(products)
             
-            # Sauvegarde principale
-            df.to_csv(filename, index=False, encoding='utf-8')
-            self.logger.info(f"✅ Results saved to {filename}")
+            # Sauvegarde principale dans le dossier data
+            main_file = os.path.join(data_dir, filename)
+            df.to_csv(main_file, index=False, encoding='utf-8')
+            self.logger.info(f"SUCCESS: Results saved to {main_file}")
             
-            # Sauvegarde par plateforme
+            # Sauvegarde par plateforme dans le dossier data
             for platform in df['platform'].unique():
                 platform_df = df[df['platform'] == platform]
-                platform_file = f"{platform}_{filename}"
+                platform_file = os.path.join(data_dir, f"{platform}_{filename}")
                 platform_df.to_csv(platform_file, index=False, encoding='utf-8')
-                self.logger.info(f"✅ {platform.title()} results saved to {platform_file}")
+                self.logger.info(f"SUCCESS: {platform.title()} results saved to {platform_file}")
             
-            # Backup avec timestamp
+            # Backup avec timestamp dans le dossier data
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = f"backup_{timestamp}_{filename}"
+            backup_file = os.path.join(data_dir, f"backup_{timestamp}_{filename}")
             df.to_csv(backup_file, index=False, encoding='utf-8')
+            self.logger.info(f"SUCCESS: Backup saved to {backup_file}")
             
         except Exception as e:
-            self.logger.error(f"❌ Error saving results: {e}")
+            self.logger.error(f"ERROR: Error saving results: {e}")
     
     def _print_extraction_stats(self, products: List[ProductData]):
         """Statistiques détaillées d'extraction"""
@@ -685,17 +707,17 @@ class UnifiedExtractionPipeline:
                 platforms[product.platform]['available'] += 1
                 stores[product.store_domain]['available'] += 1
         
-        self.logger.info("🎉 === UNIFIED EXTRACTION STATISTICS ===")
-        self.logger.info(f"📊 Total products extracted: {total}")
-        self.logger.info(f"🏪 Number of stores processed: {len(stores)}")
-        self.logger.info(f"✅ Available products: {available_count}/{total} ({available_count/total*100:.1f}%)")
+        self.logger.info("COMPLETED === UNIFIED EXTRACTION STATISTICS ===")
+        self.logger.info(f"STATS: Total products extracted: {total}")
+        self.logger.info(f"STORES: Number of stores processed: {len(stores)}")
+        self.logger.info(f"AVAILABLE: Available products: {available_count}/{total} ({available_count/total*100:.1f}%)")
         
-        self.logger.info("\n📈 === BY PLATFORM ===")
+        self.logger.info("\nPLATFORM === BY PLATFORM ===")
         for platform, stats in platforms.items():
             availability_rate = stats['available'] / stats['total'] * 100 if stats['total'] > 0 else 0
             self.logger.info(f"{platform.upper()}: {stats['total']} products ({stats['available']} available - {availability_rate:.1f}%)")
         
-        self.logger.info("\n🏬 === BY STORE ===")
+        self.logger.info("\nSTORE === BY STORE ===")
         for store, stats in stores.items():
             availability_rate = stats['available'] / stats['total'] * 100 if stats['total'] > 0 else 0
             self.logger.info(f"{store} ({stats['platform']}): {stats['total']} products ({stats['available']} available - {availability_rate:.1f}%)")
@@ -712,9 +734,9 @@ if __name__ == "__main__":
         ]
     )
     
-    # Configuration des stores multi-plateformes
+    # Configuration des stores multi-plateformes - FOCUS ON SHOPIFY ONLY
     STORES = [
-    # Boutiques Shopify
+    # Boutiques Shopify (working perfectly)
      StoreConfig(
         domain="allbirds.com",
         name="Allbirds",
@@ -731,14 +753,24 @@ if __name__ == "__main__":
         currency="GBP",
         priority=2
      ),
-
-      StoreConfig(
-        domain="barefootbuttons.com",
-        name="Studio McGee",
-        platform="woocommerce",
+     # ADD MORE SHOPIFY STORES INSTEAD OF WOOCOMMERCE
+     StoreConfig(
+        domain="casper.com",
+        name="Casper",
+        platform="shopify",
         region="US",
         currency="USD",
         priority=3
+     ),
+     
+     # WooCommerce stores (will be skipped for now)
+     StoreConfig(
+        domain="barefootbuttons.com",
+        name="Studio McGee",
+        platform="woocommerce",  # This will be automatically skipped
+        region="US",
+        currency="USD",
+        priority=10  # Low priority since it's skipped
      ),
     ]
 
@@ -748,13 +780,17 @@ if __name__ == "__main__":
         delay_between_requests=2.0,
         delay_between_domains=3.0,
         max_products_per_store=5000,
-        use_selenium=True,  # Activé pour WooCommerce
+        use_selenium=False,  # Disabled since we're skipping WooCommerce
         headless=True,
-        timeout=45
+        timeout=45,
+        skip_woocommerce=True  # NEW: Skip WooCommerce for now
     )
     
     try:
-        print("🚀 Starting Unified A2A Extraction Pipeline...")
+        print("==> Starting Unified A2A Extraction Pipeline...")
+        print("=" * 60)
+        print("NOTE: WooCommerce scraping is temporarily DISABLED")
+        print("      Focus on Shopify stores which work perfectly!")
         print("=" * 60)
         
         # Exécution du pipeline unifié
@@ -765,12 +801,12 @@ if __name__ == "__main__":
         )
         
         print("\n" + "=" * 60)
-        print("🎉 EXTRACTION COMPLETED SUCCESSFULLY!")
+        print("SUCCESS: EXTRACTION COMPLETED SUCCESSFULLY!")
         print("=" * 60)
-        print(f"📊 Total products extracted: {len(extracted_products)}")
-        print(f"📁 Main results file: 'unified_extracted_products.csv'")
-        print(f"📁 Platform-specific files: 'shopify_unified_extracted_products.csv', 'woocommerce_unified_extracted_products.csv'")
-        print(f"📋 Detailed logs: 'unified_extraction_pipeline.log'")
+        print(f"STATS: Total products extracted: {len(extracted_products)}")
+        print(f"FILES: Main results file: 'data/unified_extracted_products.csv'")
+        print(f"FILES: Platform-specific files: 'data/shopify_unified_extracted_products.csv'")
+        print(f"LOGS: Detailed logs: 'unified_extraction_pipeline.log'")
         print("=" * 60)
         
         # Analyse rapide des résultats
@@ -781,17 +817,22 @@ if __name__ == "__main__":
                     platforms[product.platform] = 0
                 platforms[product.platform] += 1
             
-            print("\n📈 QUICK ANALYSIS:")
+            print("\nANALYSIS: QUICK ANALYSIS:")
             for platform, count in platforms.items():
-                print(f"  • {platform.upper()}: {count} products")
+                print(f"  - {platform.upper()}: {count} products")
             
             available_products = sum(1 for p in extracted_products if p.available)
-            print(f"  • Available products: {available_products}/{len(extracted_products)} ({available_products/len(extracted_products)*100:.1f}%)")
+            print(f"  - Available products: {available_products}/{len(extracted_products)} ({available_products/len(extracted_products)*100:.1f}%)")
+            
+            print("\nNEXT STEPS:")
+            print("1. Store data in MongoDB: python mongo.py data/unified_extracted_products.csv")
+            print("2. Run ML analysis: python topk_analyzer.py")
+            print("3. View dashboard: streamlit run dashboard.py")
         
     except KeyboardInterrupt:
-        print("\n⚠️ Extraction interrupted by user")
+        print("\nWARNING: Extraction interrupted by user")
     except Exception as e:
-        print(f"\n❌ Extraction failed: {e}")
+        print(f"\nERROR: Extraction failed: {e}")
         logging.error(f"Pipeline execution failed: {e}", exc_info=True)
 
 # === ADDITIONAL UTILITIES ===
@@ -846,7 +887,7 @@ class DataValidator:
     @staticmethod
     def print_validation_report(stats: Dict[str, Any]):
         """Affiche un rapport de validation"""
-        print("\n🔍 === DATA VALIDATION REPORT ===")
+        print("\nVALIDATION === DATA VALIDATION REPORT ===")
         print(f"Total products: {stats['total_products']}")
         print(f"Valid products: {stats['valid_products']} ({stats['valid_products']/stats['total_products']*100:.1f}%)")
         print(f"Missing titles: {stats['missing_title']}")
@@ -855,7 +896,7 @@ class DataValidator:
         
         print("\nPlatform distribution:")
         for platform, count in stats['platforms'].items():
-            print(f"  • {platform}: {count} products")
+            print(f"  - {platform}: {count} products")
 
 class ExportManager:
     """Gestionnaire d'export pour différents formats"""
@@ -867,9 +908,9 @@ class ExportManager:
             data = [product.to_dict() for product in products]
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False, default=str)
-            print(f"✅ JSON export saved to {filename}")
+            print(f"SUCCESS: JSON export saved to {filename}")
         except Exception as e:
-            print(f"❌ JSON export failed: {e}")
+            print(f"ERROR: JSON export failed: {e}")
     
     @staticmethod
     def export_to_excel(products: List[ProductData], filename: str):
@@ -887,9 +928,9 @@ class ExportManager:
                     sheet_name = f"{platform.title()} Products"
                     platform_df.to_excel(writer, sheet_name=sheet_name, index=False)
             
-            print(f"✅ Excel export saved to {filename}")
+            print(f"SUCCESS: Excel export saved to {filename}")
         except Exception as e:
-            print(f"❌ Excel export failed: {e}")
+            print(f"ERROR: Excel export failed: {e}")
 
 class ConfigManager:
     """Gestionnaire de configuration"""
@@ -907,7 +948,7 @@ class ConfigManager:
             
             return stores
         except Exception as e:
-            print(f"❌ Error loading store config: {e}")
+            print(f"ERROR: Error loading store config: {e}")
             return []
     
     @staticmethod
@@ -922,14 +963,14 @@ class ConfigManager:
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f, indent=2, ensure_ascii=False)
             
-            print(f"✅ Store config saved to {config_file}")
+            print(f"SUCCESS: Store config saved to {config_file}")
         except Exception as e:
-            print(f"❌ Error saving store config: {e}")
+            print(f"ERROR: Error saving store config: {e}")
 
 # === EXEMPLE D'UTILISATION AVANCÉE ===
 
 def advanced_extraction_example():
-    """Exemple d'utilisation avancée du pipeline"""
+    """Exemple d'utilisation avancée du pipeline - SHOPIFY FOCUSED"""
     
     # Configuration avancée
     advanced_config = ScrapingConfig(
@@ -938,15 +979,16 @@ def advanced_extraction_example():
         delay_between_requests=1.5,
         delay_between_domains=5.0,
         max_products_per_store=10000,
-        use_selenium=True,
-        headless=False  # Pour debugging
+        use_selenium=False,  # Not needed for Shopify
+        headless=True,
+        skip_woocommerce=True  # Skip WooCommerce
     )
     
-    # Stores avec configuration complète
+    # Focus on Shopify stores only
     stores = [
         StoreConfig(
-            domain="premium-store.com",
-            name="Premium Store",
+            domain="allbirds.com",
+            name="Allbirds",
             platform="shopify",
             region="US",
             currency="USD",
@@ -957,16 +999,20 @@ def advanced_extraction_example():
             }
         ),
         StoreConfig(
-            domain="woo-store-with-api.com",
-            name="WooCommerce with API",
-            platform="woocommerce",
-            region="EU",
-            currency="EUR",
-            priority=2,
-            api_credentials={
-                "consumer_key": "ck_your_key",
-                "consumer_secret": "cs_your_secret"
-            }
+            domain="gymshark.com",
+            name="Gymshark",
+            platform="shopify",
+            region="UK",
+            currency="GBP",
+            priority=2
+        ),
+        StoreConfig(
+            domain="casper.com",
+            name="Casper",
+            platform="shopify",
+            region="US",
+            currency="USD",
+            priority=3
         )
     ]
     
@@ -989,8 +1035,8 @@ def advanced_extraction_example():
         return products
         
     except Exception as e:
-        print(f"❌ Advanced extraction failed: {e}")
+        print(f"ERROR: Advanced extraction failed: {e}")
         return []
 
-# Pour exécuter l'exemple avancé :
+# Pour exécuter l'exemple avancé (Shopify only):
 # products = advanced_extraction_example()

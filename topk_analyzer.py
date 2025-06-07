@@ -47,10 +47,10 @@ class ProductAnalyzer:
             self.client.admin.command('ping')
             self.db = self.client[self.db_name]
             self.collection = self.db[self.collection_name]
-            logger.info("✅ Connected to MongoDB")
+            logger.info("Connected to MongoDB")
             return True
         except ConnectionFailure as e:
-            logger.error(f"❌ MongoDB connection failed: {e}")
+            logger.error(f"MongoDB connection failed: {e}")
             return False
     
     def get_products_dataframe(self, filters: Dict = None) -> pd.DataFrame:
@@ -661,15 +661,15 @@ def get_database_stats():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting Top-K Products Analysis API...")
+    print("Starting Top-K Products Analysis API...")
     print("="*60)
-    print("📋 Available endpoints:")
+    print("Available endpoints:")
     print("• GET  /health - Health check")
     print("• POST /api/top-k-products - Get top K products")
     print("• GET  /api/criteria-suggestions - Get criteria suggestions")
     print("• GET  /api/database-stats - Get database statistics")
     print("="*60)
-    print("🌐 Server starting on http://localhost:5000")
-    print("📡 Use Postman to test the API endpoints")
+    print("Server starting on http://localhost:5000")
+    print("Use Postman to test the API endpoints")
     
     app.run(host='0.0.0.0', port=5000, debug=True)
