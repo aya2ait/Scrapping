@@ -5,7 +5,6 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-  # Allow manual triggering
   workflow_dispatch:
     inputs:
       skip_extraction:
@@ -26,10 +25,9 @@ env:
 jobs:
   ml-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # Prevent hanging workflows
+    timeout-minutes: 45
     
     services:
-      # MongoDB service for data storage
       mongodb:
         image: mongo:5.0
         ports:
@@ -41,458 +39,138 @@ jobs:
           --health-retries 5
 
     steps:
-    # ========================================
-    # SETUP AND PREPARATION
-    # ========================================
-    
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1  # Shallow clone for faster checkout
-    
-    - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'  # Cache pip dependencies
-    
-    - name: 📋 Display system information
-      run: |
-        echo "🖥️  System Information:"
-        echo "- OS: $(lsb_release -d | cut -f2)"
-        echo "- Python: $(python --version)"
-        echo "- Working Directory: $(pwd)"
-        echo "- Available Space: $(df -h . | awk 'NR==2 {print $4}')"
-        echo "- Memory: $(free -h | awk 'NR==2 {print $7 " available"}')"
-        echo "- CPU Cores: $(nproc)"
-    
-    # ========================================
-    # CHROME AND SELENIUM SETUP
-    # ========================================
-    
-    - name: 🌐 Install Chrome and ChromeDriver
-      run: |
-        echo "📦 Installing Google Chrome..."
-        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
-        
-        echo "🚗 Installing ChromeDriver..."
-        # Install chromium-chromedriver as backup
-        sudo apt-get install -y chromium-chromedriver
-        
-        # Verify installations
-        echo "✅ Chrome version: $(google-chrome --version)"
-        echo "✅ ChromeDriver version: $(chromedriver --version 2>/dev/null || echo 'Using system chromedriver')"
-        
-        # Ensure ChromeDriver is in PATH
-        export PATH=$PATH:/usr/lib/chromium-browser/
-        echo "PATH=$PATH:/usr/lib/chromium-browser/" >> $GITHUB_ENV
-    
-    # ========================================
-    # PYTHON DEPENDENCIES
-    # ========================================
-    
-    - name: 📦 Create requirements.txt if missing
-      run: |
-        if [ ! -f requirements.txt ]; then
-          echo "📝 Creating requirements.txt with essential dependencies..."
-          cat > requirements.txt << EOF
-        # Core data processing
-        pandas>=1.5.0
-        numpy>=1.21.0
-        
-        # Machine Learning
-        scikit-learn>=1.1.0
-        xgboost>=1.6.0
-        lightgbm>=3.3.0
-        
-        # Web scraping
-        selenium>=4.0.0
-        beautifulsoup4>=4.11.0
-        requests>=2.28.0
-        
-        # Database
-        pymongo>=4.0.0
-        
-        # ML tracking and API
-        mlflow>=2.0.0
-        flask>=2.2.0
-        
-        # Visualization
-        matplotlib>=3.5.0
-        seaborn>=0.11.0
-        
-        # Utilities
-        python-dateutil>=2.8.0
-        pytz>=2022.1
-        EOF
-          echo "✅ requirements.txt created"
-        else
-          echo "✅ requirements.txt already exists"
-        fi
-        
-        echo "📋 Requirements content:"
-        cat requirements.txt
-    
-    - name: 🔧 Install Python dependencies
-      run: |
-        echo "🚀 Upgrading pip..."
-        python -m pip install --upgrade pip
-        
-        echo "📦 Installing requirements..."
-        pip install -r requirements.txt
-        
-        echo "📋 Installed packages:"
-        pip list | grep -E "(pandas|numpy|sklearn|selenium|pymongo|mlflow|flask)"
-    
-    # ========================================
-    # ENVIRONMENT SETUP
-    # ========================================
-    
-    - name: 🗂️ Setup project directories
-      run: |
-        echo "📁 Creating necessary directories..."
-        mkdir -p data
-        mkdir -p mlruns
-        mkdir -p logs
-        
-        echo "🔍 Current directory structure:"
-        ls -la
-        
-        echo "✅ Directories created successfully"
-    
-    - name: 🔗 Verify MongoDB connection
-      run: |
-        echo "🔍 Testing MongoDB connection..."
-        timeout 30 bash -c 'until nc -z localhost 27017; do sleep 1; done'
-        echo "✅ MongoDB is ready and accepting connections!"
-        
-        # Test basic MongoDB operations
-        python -c "
-        from pymongo import MongoClient
-        import sys
-        try:
-            client = MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=5000)
-            client.admin.command('ping')
-            print('✅ MongoDB connection test successful')
-            
-            # Create test database
-            db = client['test_db']
-            collection = db['test_collection']
-            result = collection.insert_one({'test': 'connection'})
-            print(f'✅ Test document inserted with ID: {result.inserted_id}')
-            
-            client.close()
-        except Exception as e:
-            print(f'❌ MongoDB connection failed: {e}')
-            sys.exit(1)
-        "
-    
-    
-    
-    # ========================================
-    # MAIN PIPELINE EXECUTION
-    # ========================================
-    
-    - name: 🚀 Execute ML Pipeline
-      env:
-        SKIP_EXTRACTION: ${{ github.event.inputs.skip_extraction || 'false' }}
-        SKIP_STORAGE: ${{ github.event.inputs.skip_storage || 'false' }}
-      run: |
-        echo "🎯 Starting E-commerce ML Pipeline execution..."
-        echo "Configuration:"
-        echo "- Skip Extraction: $SKIP_EXTRACTION"
-        echo "- Skip Storage: $SKIP_STORAGE"
-        echo "- Working Directory: $(pwd)"
-        
-        # Build orchestration command
-        ORCHESTRATION_CMD="python orchestration.py --skip-api"
-        
-        if [ "$SKIP_EXTRACTION" = "true" ]; then
-          ORCHESTRATION_CMD="$ORCHESTRATION_CMD --skip-extraction"
-        fi
-        
-        if [ "$SKIP_STORAGE" = "true" ]; then
-          ORCHESTRATION_CMD="$ORCHESTRATION_CMD --skip-storage"
-        fi
-        
-        echo "🔧 Command: $ORCHESTRATION_CMD"
-        echo "⏰ Started at: $(date)"
-        
-        # Execute with timeout and error handling
-        timeout 30m $ORCHESTRATION_CMD 2>&1 | tee logs/pipeline_execution.log
-        
-        PIPELINE_EXIT_CODE=${PIPESTATUS[0]}
-        echo "📊 Pipeline finished with exit code: $PIPELINE_EXIT_CODE"
-        echo "⏰ Finished at: $(date)"
-        
-        if [ $PIPELINE_EXIT_CODE -ne 0 ]; then
-          echo "❌ Pipeline execution failed!"
-          exit $PIPELINE_EXIT_CODE
-        else
-          echo "✅ Pipeline execution successful!"
-        fi
-    
-    # ========================================
-    # VALIDATION AND VERIFICATION
-    # ========================================
-    
-    - name: 🔍 Validate pipeline outputs
-      run: |
-        echo "🔍 Validating pipeline outputs..."
-        
-        # Check data directory
-        echo "📁 Data directory contents:"
-        if [ -d "data" ]; then
-          ls -la data/ || echo "Data directory is empty"
-          
-          # Check main output file
-          if [ -f "data/unified_extracted_products.csv" ]; then
-            echo "✅ Main CSV file found"
-            echo "📊 File size: $(du -h data/unified_extracted_products.csv | cut -f1)"
-            echo "📋 Row count: $(tail -n +2 data/unified_extracted_products.csv | wc -l)"
-            echo "📋 First 5 lines:"
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📋 Display system information
+        run: |
+          echo "🖥️ OS: $(lsb_release -d | cut -f2)"
+          echo "Python: $(python --version)"
+          echo "Disk: $(df -h . | awk 'NR==2 {print $4}')"
+          echo "Memory: $(free -h | awk 'NR==2 {print $7}')"
+          echo "Cores: $(nproc)"
+
+      - name: 🌐 Install Chrome and ChromeDriver
+        run: |
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable chromium-chromedriver
+          echo "PATH=$PATH:/usr/lib/chromium-browser/" >> $GITHUB_ENV
+
+      - name: 📦 Create requirements.txt if missing
+        run: |
+          if [ ! -f requirements.txt ]; then
+            cat > requirements.txt << EOF
+          pandas>=1.5.0
+          numpy>=1.21.0
+          scikit-learn>=1.1.0
+          xgboost>=1.6.0
+          lightgbm>=3.3.0
+          selenium>=4.0.0
+          beautifulsoup4>=4.11.0
+          requests>=2.28.0
+          pymongo>=4.0.0
+          mlflow>=2.0.0
+          flask>=2.2.0
+          matplotlib>=3.5.0
+          seaborn>=0.11.0
+          python-dateutil>=2.8.0
+          pytz>=2022.1
+          EOF
+          fi
+          cat requirements.txt
+
+      - name: 🔧 Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🗂️ Setup project directories
+        run: |
+          mkdir -p data mlruns logs
+          ls -la
+
+      - name: 🔗 Verify MongoDB connection
+        run: |
+          timeout 30 bash -c 'until nc -z localhost 27017; do sleep 1; done'
+          python -c "
+          from pymongo import MongoClient
+          client = MongoClient('mongodb://localhost:27017/')
+          client.admin.command('ping')
+          print('✅ MongoDB is up!')
+          "
+
+      - name: 🚀 Execute ML Pipeline
+        env:
+          SKIP_EXTRACTION: ${{ github.event.inputs.skip_extraction || 'false' }}
+          SKIP_STORAGE: ${{ github.event.inputs.skip_storage || 'false' }}
+        run: |
+          CMD="python orchestration.py --skip-api"
+          if [ \"$SKIP_EXTRACTION\" = \"true\" ]; then CMD=\"$CMD --skip-extraction\"; fi
+          if [ \"$SKIP_STORAGE\" = \"true\" ]; then CMD=\"$CMD --skip-storage\"; fi
+          echo "Running: $CMD"
+          timeout 30m $CMD 2>&1 | tee logs/pipeline_execution.log
+
+      - name: 📊 Validate pipeline outputs
+        run: |
+          if [ -f data/unified_extracted_products.csv ]; then
+            echo "✅ Data CSV found:"
+            wc -l data/unified_extracted_products.csv
             head -5 data/unified_extracted_products.csv
           else
-            echo "⚠️  Main CSV file not found"
+            echo "⚠️ No CSV file found"
           fi
-          
-          # List all generated files
-          echo "📋 All files in data/:"
-          find data/ -type f -exec ls -lh {} \;
-        else
-          echo "❌ Data directory not found"
-        fi
-        
-        # Check MLflow artifacts
-        echo "🔬 MLflow artifacts:"
-        if [ -d "mlruns" ]; then
-          echo "✅ MLflow directory found"
-          echo "📊 Directory size: $(du -sh mlruns/ | cut -f1)"
-          find mlruns/ -name "*.txt" -o -name "*.json" -o -name "*.yaml" | head -10
-        else
-          echo "⚠️  MLflow directory not found"
-        fi
-        
-        # Check logs
-        echo "📝 Generated logs:"
-        if [ -d "logs" ]; then
-          ls -la logs/
-        fi
-        
-        if [ -f "orchestration.log" ]; then
-          echo "📊 Orchestration log size: $(du -h orchestration.log | cut -f1)"
-          echo "📋 Last 10 lines of orchestration.log:"
-          tail -10 orchestration.log
-        fi
-        
-        if [ -f "unified_extraction_pipeline.log" ]; then
-          echo "📊 Extraction log size: $(du -h unified_extraction_pipeline.log | cut -f1)"
-        fi
-    
-    - name: 🧪 Test MongoDB data storage
-      if: ${{ github.event.inputs.skip_storage != 'true' }}
-      run: |
-        echo "🧪 Testing MongoDB data storage..."
-        python -c "
-        from pymongo import MongoClient
-        import sys
-        
-        try:
-            client = MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=5000)
-            db = client['products_db']
-            collection = db['products']
-            
-            # Count documents
-            doc_count = collection.count_documents({})
-            print(f'✅ Found {doc_count} products in MongoDB')
-            
-            if doc_count > 0:
-                # Sample document
-                sample = collection.find_one()
-                print(f'📋 Sample document keys: {list(sample.keys()) if sample else \"None\"}')
-                
-                # Basic stats
-                available_count = collection.count_documents({'available': True})
-                print(f'📊 Available products: {available_count}/{doc_count}')
-                
-                # Platform distribution
-                pipeline = [
-                    {'\$group': {'_id': '\$platform', 'count': {'\$sum': 1}}},
-                    {'\$sort': {'count': -1}}
-                ]
-                platforms = list(collection.aggregate(pipeline))
-                print(f'📊 Platform distribution: {dict((p[\"_id\"], p[\"count\"]) for p in platforms)}')
-            
-            client.close()
-            print('✅ MongoDB validation successful')
-            
-        except Exception as e:
-            print(f'❌ MongoDB validation failed: {e}')
-            sys.exit(1)
-        "
-    
-    # ========================================
-    # QUALITY CHECKS
-    # ========================================
-    
-    - name: 🔍 Run quality checks
-      run: |
-        echo "🔍 Running pipeline quality checks..."
-        
-        python -c "
-        import os
-        import pandas as pd
-        import json
-        
-        # Check 1: CSV file quality
-        csv_file = 'data/unified_extracted_products.csv'
-        if os.path.exists(csv_file):
-            try:
-                df = pd.read_csv(csv_file)
-                print(f'✅ CSV loaded successfully: {len(df)} rows, {len(df.columns)} columns')
-                
-                # Check for required columns
-                required_cols = ['title', 'price', 'available', 'store_domain', 'platform']
-                missing_cols = [col for col in required_cols if col not in df.columns]
-                if missing_cols:
-                    print(f'⚠️  Missing required columns: {missing_cols}')
-                else:
-                    print('✅ All required columns present')
-                
-                # Data quality checks
-                null_percentages = (df.isnull().sum() / len(df) * 100).round(2)
-                high_null_cols = null_percentages[null_percentages > 50].to_dict()
-                if high_null_cols:
-                    print(f'⚠️  High null percentage columns: {high_null_cols}')
-                
-                # Price validation
-                if 'price' in df.columns:
-                    price_stats = df['price'].describe()
-                    print(f'💰 Price statistics: min={price_stats[\"min\"]:.2f}, max={price_stats[\"max\"]:.2f}, mean={price_stats[\"mean\"]:.2f}')
-                
-                print('✅ CSV quality check passed')
-                
-            except Exception as e:
-                print(f'❌ CSV quality check failed: {e}')
-                exit(1)
-        else:
-            print('⚠️  CSV file not found for quality check')
-        
-        # Check 2: MLflow artifacts
-        if os.path.exists('mlruns'):
-            print('✅ MLflow artifacts directory exists')
-        
-        print('✅ Quality checks completed')
-        "
-    
-    # ========================================
-    # ARTIFACT MANAGEMENT
-    # ========================================
-    
-    - name: 📦 Upload extraction results
-      uses: actions/upload-artifact@v4
-      if: always()  # Upload even if pipeline fails
-      with:
-        name: extraction-results-${{ github.run_number }}
-        path: |
-          data/
-          !data/*.tmp
-        retention-days: 30
-        if-no-files-found: warn
-    
-    - name: 📦 Upload MLflow artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: mlflow-artifacts-${{ github.run_number }}
-        path: |
-          mlruns/
-        retention-days: 30
-        if-no-files-found: warn
-    
-    - name: 📦 Upload logs
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: pipeline-logs-${{ github.run_number }}
-        path: |
-          logs/
-          *.log
-        retention-days: 7
-        if-no-files-found: warn
-    
-    # ========================================
-    # REPORTING AND SUMMARY
-    # ========================================
-    
-    - name: 📊 Generate pipeline summary
-      if: always()
-      run: |
-        echo "📊 Pipeline Execution Summary" > pipeline_summary.md
-        echo "================================" >> pipeline_summary.md
-        echo "" >> pipeline_summary.md
-        echo "**Execution Details:**" >> pipeline_summary.md
-        echo "- Workflow Run: #${{ github.run_number }}" >> pipeline_summary.md
-        echo "- Commit: ${{ github.sha }}" >> pipeline_summary.md
-        echo "- Branch: ${{ github.ref_name }}" >> pipeline_summary.md
-        echo "- Triggered by: ${{ github.event_name }}" >> pipeline_summary.md
-        echo "- Execution time: $(date)" >> pipeline_summary.md
-        echo "" >> pipeline_summary.md
-        
-        # Data summary
-        if [ -f "data/unified_extracted_products.csv" ]; then
-          row_count=$(tail -n +2 data/unified_extracted_products.csv | wc -l)
-          file_size=$(du -h data/unified_extracted_products.csv | cut -f1)
-          echo "**Data Extraction Results:**" >> pipeline_summary.md
-          echo "- Products extracted: $row_count" >> pipeline_summary.md
-          echo "- File size: $file_size" >> pipeline_summary.md
-        else
-          echo "**Data Extraction Results:**" >> pipeline_summary.md
-          echo "- ⚠️ No data file generated" >> pipeline_summary.md
-        fi
-        
-        echo "" >> pipeline_summary.md
-        echo "**Generated Artifacts:**" >> pipeline_summary.md
-        echo "- extraction-results-${{ github.run_number }}" >> pipeline_summary.md
-        echo "- mlflow-artifacts-${{ github.run_number }}" >> pipeline_summary.md
-        echo "- pipeline-logs-${{ github.run_number }}" >> pipeline_summary.md
-        
-        echo "📋 Pipeline Summary:"
-        cat pipeline_summary.md
-    
-    - name: 📦 Upload pipeline summary
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: pipeline-summary-${{ github.run_number }}
-        path: pipeline_summary.md
-        retention-days: 90
 
-  # ========================================
-  # NOTIFICATION JOB (Optional)
-  # ========================================
-  
+      - name: 🧪 Test MongoDB data storage
+        if: ${{ github.event.inputs.skip_storage != 'true' }}
+        run: |
+          python -c "
+          from pymongo import MongoClient
+          client = MongoClient('mongodb://localhost:27017/')
+          count = client['products_db']['products'].count_documents({})
+          print(f'✅ Products in DB: {count}')
+          "
+
+      - name: 📦 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-and-data
+          path: |
+            data/
+            mlruns/
+            logs/
+          retention-days: 30
+
+      - name: 📊 Summary Report
+        if: always()
+        run: |
+          echo "# Pipeline Summary" > summary.md
+          echo "- Run number: ${{ github.run_number }}" >> summary.md
+          echo "- Branch: ${{ github.ref_name }}" >> summary.md
+          echo "- Skip Extraction: ${{ github.event.inputs.skip_extraction }}" >> summary.md
+          echo "- Skip Storage: ${{ github.event.inputs.skip_storage }}" >> summary.md
+          echo "## Files" >> summary.md
+          ls -lh data/ >> summary.md || echo "No data files found" >> summary.md
+          cat summary.md
+
+      - name: 📤 Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-${{ github.run_number }}
+          path: summary.md
+          retention-days: 90
+
   notify:
     runs-on: ubuntu-latest
     needs: ml-pipeline
     if: always() && github.ref == 'refs/heads/main'
-    
     steps:
-    - name: 📱 Pipeline Status Notification
-      run: |
-        if [ "${{ needs.ml-pipeline.result }}" == "success" ]; then
-          echo "✅ ML Pipeline executed successfully!"
-          echo "🎯 Results available in artifacts: extraction-results-${{ github.run_number }}"
-        else
-          echo "❌ ML Pipeline failed!"
-          echo "🔍 Check logs in artifacts: pipeline-logs-${{ github.run_number }}"
-        fi
-        
-        echo "📊 Workflow Summary:"
-        echo "- Repository: ${{ github.repository }}"
-        echo "- Commit: ${{ github.sha }}"
-        echo "- Run: #${{ github.run_number }}"
-        echo "- Status: ${{ needs.ml-pipeline.result }}"
+      - run: echo "📬 Notification step placeholder (e.g., Slack, Email, etc.)"

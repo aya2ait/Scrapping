@@ -1,0 +1,126 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: ecommerce-ml-pipeline-
+  annotations:
+    pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
+    pipelines.kubeflow.org/pipeline_compilation_time: '2024-12-08T10:00:00'
+    pipelines.kubeflow.org/pipeline_spec: |
+      {
+        "description": "E-commerce ML Pipeline for scraping and analysis",
+        "name": "E-commerce ML Pipeline"
+      }
+spec:
+  arguments:
+    parameters:
+    - name: skip-extraction
+      value: "false"
+    - name: skip-storage  
+      value: "false"
+  entrypoint: ecommerce-ml-pipeline
+  templates:
+  
+  # Main pipeline template
+  - name: ecommerce-ml-pipeline
+    dag:
+      tasks:
+      - name: data-extraction
+        template: scraping-step
+        when: "{{workflow.parameters.skip-extraction}} != true"
+        
+      - name: data-storage
+        template: storage-step
+        dependencies: [data-extraction]
+        when: "{{workflow.parameters.skip-storage}} != true"
+        
+      - name: analysis-api
+        template: api-step
+        dependencies: [data-storage]
+
+  # Scraping/Extraction Step
+  - name: scraping-step
+    container:
+      image: scrapping-scraper:latest
+      command: [python3]
+      args: [pipeline.py]
+      env:
+      - name: MONGODB_URI
+        value: "mongodb://ml-pipeline-mongodb:27017"
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "2Gi" 
+          cpu: "1000m"
+      volumeMounts:
+      - name: data-volume
+        mountPath: /app/data
+    outputs:
+      artifacts:
+      - name: extracted-data
+        path: /app/data/unified_extracted_products.csv
+
+  # Storage Step  
+  - name: storage-step
+    container:
+      image: scrapping-storage:latest
+      command: [python]
+      args: [mongo.py, /app/data/unified_extracted_products.csv]
+      env:
+      - name: MONGODB_URI
+        value: "mongodb://ml-pipeline-mongodb:27017"
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+      volumeMounts:
+      - name: data-volume
+        mountPath: /app/data
+    inputs:
+      artifacts:
+      - name: extracted-data
+        path: /app/data/unified_extracted_products.csv
+
+  # Analysis API Step
+  - name: api-step
+    container:
+      image: scrapping-api:latest
+      command: [python]
+      args: [topk_analyzer.py]
+      env:
+      - name: MONGODB_URI
+        value: "mongodb://ml-pipeline-mongodb:27017"
+      - name: FLASK_ENV
+        value: "production"
+      ports:
+      - containerPort: 5000
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+
+  # Volume definitions
+  volumes:
+  - name: data-volume
+    emptyDir: {}
+
+---
+# Service for API access
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-pipeline-api-service
+spec:
+  selector:
+    app: ml-pipeline-api
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: LoadBalancer

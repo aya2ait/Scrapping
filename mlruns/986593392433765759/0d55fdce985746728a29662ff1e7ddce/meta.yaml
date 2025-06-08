@@ -1,5 +1,5 @@
 artifact_uri: file:///C:/Users/HP/Desktop/LSI2TP/DATA_MINING/Scrapping/mlruns/986593392433765759/0d55fdce985746728a29662ff1e7ddce/artifacts
-end_time: null
+end_time: 1749398935259
 entry_point_name: ''
 experiment_id: '986593392433765759'
 lifecycle_stage: active
@@ -10,6 +10,6 @@ source_name: ''
 source_type: 4
 source_version: ''
 start_time: 1749313170955
-status: 1
+status: 3
 tags: []
 user_id: HP

@@ -18,9 +18,7 @@ services:
 
   # Data extraction service
   scraper:
-    build:
-      context: .
-      dockerfile: Dockerfile.pipelinee
+    image: safaehm/scrapping-scrapper:latest
     container_name: ml-pipeline-scraper
     depends_on:
       mongodb:
@@ -36,9 +34,7 @@ services:
 
   # Data storage service
   storage:
-    build:
-      context: .
-      dockerfile: Dockerfile.mongo
+    image: safaehm/scrapping-storage:latest
     container_name: ml-pipeline-storage
     depends_on:
       mongodb:
@@ -54,9 +50,7 @@ services:
 
   # ML Analysis API
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
+    image: safaehm/scrapping-api:latest
     container_name: ml-pipeline-api
     depends_on:
       mongodb:

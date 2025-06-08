@@ -203,3 +203,6 @@ UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in posit
 2025-06-07 17:21:47,490 - Orchestration - INFO - Starting API server for product analysis...
 2025-06-07 17:21:52,611 - Orchestration - INFO - API server started successfully (PID: 20028)
 2025-06-07 17:21:52,645 - Orchestration - INFO - API server is running. Press Ctrl+C to stop.
+2025-06-08 17:08:54,594 - Orchestration - INFO - Stopping API server...
+2025-06-08 17:08:55,119 - Orchestration - INFO - API server stopped
+2025-06-08 17:08:55,249 - Orchestration - INFO - Pipeline completed successfully!
