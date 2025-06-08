@@ -721,7 +721,7 @@ if __name__ == "__main__":
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler('unified_extraction_pipeline.log'),
+            logging.FileHandler('logs/unified_extraction_pipeline.log'),
             logging.StreamHandler()
         ]
     )

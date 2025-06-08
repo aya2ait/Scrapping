@@ -1,0 +1,84 @@
+services:
+  # MongoDB database
+  mongodb:
+    image: mongo:5.0
+    container_name: ml-pipeline-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - ml-pipeline-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Data extraction service
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.pipelinee
+    container_name: ml-pipeline-scraper
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - ml-pipeline-network
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+    restart: unless-stopped
+
+  # Data storage service
+  storage:
+    build:
+      context: .
+      dockerfile: Dockerfile.mongo
+    container_name: ml-pipeline-storage
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      scraper:
+        condition: service_started
+    volumes:
+      - ./data:/app/data
+    networks:
+      - ml-pipeline-network
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+
+  # ML Analysis API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: ml-pipeline-api
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      storage:
+        condition: service_started
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./mlruns:/app/mlruns
+    networks:
+      - ml-pipeline-network
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+    restart: unless-stopped
+
+# Define networks
+networks:
+  ml-pipeline-network:
+    driver: bridge
+
+# Define volumes
+volumes:
+  mongodb_data:

@@ -22,3 +22,16 @@ seaborn>=0.12.0
 
 # Testing and development
 pytest>=7.3.0
+
+# MISSING PACKAGES - ADD THESE:
+# Machine Learning packages (for topk_analyzer.py)
+xgboost>=1.7.0
+lightgbm>=3.3.0
+
+# Utilities for date/time handling
+python-dateutil>=2.8.0
+pytz>=2022.7
+
+# Additional ML and data processing
+joblib>=1.2.0
+scipy>=1.10.0

@@ -1,0 +1,12 @@
+# Ignore these files when building containers
+.git
+.gitignore
+README.md
+.env
+logs/
+data/*.tmp
+mlruns/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
