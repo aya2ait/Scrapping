@@ -21,7 +21,7 @@ on:
 env:
   PYTHON_VERSION: '3.9'
   MONGODB_VERSION: '5.0'
-  DOCKERHUB_USERNAME: safaemh  # Your Docker Hub username
+  DOCKERHUB_USERNAME: safaehm
 
 jobs:
   ml-pipeline:
@@ -87,6 +87,12 @@ jobs:
         run: |
           mkdir -p data mlruns logs
           ls -la
+
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: 🔗 Verify MongoDB connection
         run: |
