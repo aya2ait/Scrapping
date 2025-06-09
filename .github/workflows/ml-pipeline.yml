@@ -108,24 +108,10 @@ jobs:
         env:
           SKIP_SCRAPER: ${{ github.event.inputs.skip_scraper || 'false' }}
           SKIP_STORAGE: ${{ github.event.inputs.skip_storage || 'false' }}
-          MONGODB_VERSION: ${{ env.MONGODB_VERSION }}
         run: |
           # Create docker-compose-ci.yml for CI
           cat > docker-compose-ci.yml << EOF
           services:
-            mongodb:
-              image: mongo:$MONGODB_VERSION
-              ports:
-                - "27017:27017"
-              volumes:
-                - mongodb_data:/data/db
-              networks:
-                - ml-pipeline-network
-              healthcheck:
-                test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-                interval: 10s
-                timeout: 5s
-                retries: 5
             scraper:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
               depends_on:
@@ -137,7 +123,7 @@ jobs:
               networks:
                 - ml-pipeline-network
               environment:
-                - MONGO_URI=mongodb://mongodb:27017/
+                - MONGO_URI=mongodb://localhost:27017/
               command: ["python3", "pipeline.py"]
             storage:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
@@ -151,7 +137,7 @@ jobs:
               networks:
                 - ml-pipeline-network
               environment:
-                - MONGO_URI=mongodb://mongodb:27017/
+                - MONGO_URI=mongodb://localhost:27017/
               command: ["python", "mongo.py", "/app/data/unified_extracted_products.csv"]
             api:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest
@@ -168,12 +154,10 @@ jobs:
               networks:
                 - ml-pipeline-network
               environment:
-                - MONGO_URI=mongodb://mongodb:27017/
+                - MONGO_URI=mongodb://localhost:27017/
           networks:
             ml-pipeline-network:
               driver: bridge
-          volumes:
-            mongodb_data:
           EOF
           # Run services conditionally
           if [ "$SKIP_SCRAPER" = "true" ]; then
