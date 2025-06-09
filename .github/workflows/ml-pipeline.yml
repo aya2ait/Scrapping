@@ -30,7 +30,7 @@ jobs:
 
     services:
       mongodb:
-        image: mongo:${{ env.MONGODB_VERSION }}
+        image: mongo:5.0  # Hardcode or use env variable in services block
         ports:
           - 27017:27017
         options: >-
@@ -75,6 +75,9 @@ jobs:
           lightgbm>=4.0.0
           requests>=2.28.0
           selenium>=4.10.0
+          streamlit>=1.20.0
+          transformers>=4.30.0
+          torch>=2.0.0
           EOF
           cat requirements.txt
 
@@ -102,12 +105,13 @@ jobs:
         env:
           SKIP_SCRAPER: ${{ github.event.inputs.skip_scraper || 'false' }}
           SKIP_STORAGE: ${{ github.event.inputs.skip_storage || 'false' }}
+          MONGODB_VERSION: ${{ env.MONGODB_VERSION }}  # Pass env variable to step
         run: |
-          # Create docker-compose.yml for CI
+          # Create docker-compose-ci.yml for CI
           cat > docker-compose-ci.yml << EOF
           services:
             mongodb:
-              image: mongo:${{ env.MONGODB_VERSION }}
+              image: mongo:$MONGODB_VERSION
               ports:
                 - "27017:27017"
               volumes:
@@ -162,6 +166,17 @@ jobs:
                 - ml-pipeline-network
               environment:
                 - MONGO_URI=mongodb://mongodb:27017/
+            dashboard:
+              image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-dashboard:latest
+              depends_on:
+                api:
+                  condition: service_started
+              ports:
+                - "8501:8501"
+              volumes:
+                - ./data:/app/data
+              networks:
+                - ml-pipeline-network
           networks:
             ml-pipeline-network:
               driver: bridge
@@ -177,7 +192,7 @@ jobs:
             sed -i '/storage:/,/command:/d' docker-compose-ci.yml
             sed -i '/storage:/d' docker-compose-ci.yml
           fi
-          docker-compose -f docker-compose-ci.yml up -d --build
+          docker-compose -f docker-compose-ci.yml up -d
           sleep 60  # Wait for services to process
           docker-compose -f docker-compose-ci.yml logs
           docker-compose -f docker-compose-ci.yml down
@@ -210,6 +225,17 @@ jobs:
         run: |
           curl -f http://localhost:5000/health || { echo "❌ API health check failed"; exit 1; }
           curl -f http://localhost:5000/api/database-stats || { echo "❌ API database-stats failed"; exit 1; }
+
+      - name: 🧪 Test Dashboard
+        run: |
+          docker run -d -p 8501:8501 --network ml-pipeline-network ${{ env.DOCKERHUB_USERNAME }}/ecommerce-dashboard:latest
+          sleep 10
+          curl -f http://localhost:8501 || { echo "❌ Dashboard failed"; exit 1; }
+
+      - name: 🧪 Test LLM Enrichment
+        if: ${{ github.event.inputs.skip_storage != 'true' }}
+        run: |
+          docker run --network ml-pipeline-network ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest python llm_enrich.py
 
       - name: 📦 Upload Artifacts
         uses: actions/upload-artifact@v4
