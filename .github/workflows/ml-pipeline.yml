@@ -115,25 +115,25 @@ jobs:
             scraper:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
               volumes:
-                - ./data:/app/data
+                - ./data:/data
                 - ./logs:/app/logs
               networks:
                 - ml-pipeline-network
               environment:
                 - MONGO_URI=mongodb://localhost:27017/
-              command: ["sh", "-c", "python3 pipeline.py && ls -l /app/data"]
+              command: ["sh", "-c", "python3 pipeline.py && ls -l /data"]
             storage:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
               depends_on:
                 scraper:
                   condition: service_started
               volumes:
-                - ./data:/app/data
+                - ./data:/data
               networks:
                 - ml-pipeline-network
               environment:
                 - MONGO_URI=mongodb://localhost:27017/
-              command: ["sh", "-c", "ls -l /app/data && python mongo.py /app/data/data.csv"]
+              command: ["sh", "-c", "ls -l data && python mongo.py /data/unified_extracted_products.csv"]
             api:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest
               depends_on:
@@ -142,7 +142,7 @@ jobs:
               ports:
                 - "5000:5000"
               volumes:
-                - ./data:/app/data
+                - ./data:/data
                 - ./mlruns:/app/mlruns
               networks:
                 - ml-pipeline-network
@@ -162,7 +162,7 @@ jobs:
             sed -i '/storage:/d' docker-compose-ci.yml
           fi
           docker-compose -f docker-compose-ci.yml up -d
-          sleep 120  # Increased to ensure services complete
+          sleep 120
           docker-compose -f docker-compose-ci.yml logs
           docker-compose -f docker-compose-ci.yml down
 
@@ -185,10 +185,10 @@ jobs:
 
       - name: 📊 Validate pipeline outputs
         run: |
-          if [ -f data/data.csv ]; then
+          if [ -f data/unified_extracted_products.csv ]; then
             echo "✅ Data CSV found:"
-            wc -l data/data.csv
-            head -5 data/data.csv
+            wc -l data/unified_extracted_products.csv
+            head -5 data/unified_extracted_products.csv
           else
             echo "⚠️ No CSV file found"
             exit 1
