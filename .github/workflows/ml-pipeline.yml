@@ -25,11 +25,20 @@ env:
 jobs:
   ml-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       MONGODB_VERSION: '5.0'
 
-    
+    services:
+      mongodb:
+        image: mongo:5.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: 📥 Checkout repository
@@ -74,10 +83,10 @@ jobs:
 
       - name: 🔗 Verify MongoDB connection
         run: |
-          timeout 30 bash -c 'until nc -z localhost 27018; do sleep 1; done'
+          timeout 30 bash -c 'until nc -z localhost 27017; do sleep 1; done'
           python -c "
           from pymongo import MongoClient
-          client = MongoClient('mongodb://localhost:27018/')
+          client = MongoClient('mongodb://localhost:27017/')
           client.admin.command('ping')
           print('✅ MongoDB is up!')
           "
@@ -128,14 +137,19 @@ jobs:
                 - ./logs:/app/logs
               environment:
                 - MONGO_URI=mongodb://mongodb:27017/
-              command: ["sh", "-c", "ls -l /data && python mongo.py /data/unified_extracted_products.csv"]
+              command: ["sh", "-c", "ls -l /data && python mongo.py /data/unified_extracted_products.csv && touch /data/storage_done"]
+              healthcheck:
+                test: ["CMD", "test", "-f", "/data/storage_done"]
+                interval: 10s
+                timeout: 5s
+                retries: 60
               networks:
                 - ml-pipeline-network
             api:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest
               depends_on:
                 storage:
-                  condition: service_started
+                  condition: service_healthy
               ports:
                 - "5000:5000"
               volumes:
@@ -153,21 +167,22 @@ jobs:
           EOF
           # Run services conditionally
           if [ "$SKIP_SCRAPER" = "true" ]; then
-            sed -i '/scraper:/,/networks:/d' docker-compose-ci.yml
+            sed -i "/scraper:/,/^\s*networks:/d" docker-compose-ci.yml
           fi
           if [ "$SKIP_STORAGE" = "true" ]; then
-            sed -i '/storage:/,/networks:/d' docker-compose-ci.yml
+            sed -i "/storage:/,/^\s*networks:/d" docker-compose-ci.yml
           fi
+          cat docker-compose-ci.yml
           docker-compose -f docker-compose-ci.yml up -d
-          sleep 600
-          docker-compose -f docker-compose-ci.yml logs
+          sleep 900  # Increased to 15 min
+          docker-compose -f docker-compose-ci.yml logs -t
           docker-compose -f docker-compose-ci.yml down
 
       - name: 🕵️ Debug MongoDB Contents
         run: |
           python -c "
           from pymongo import MongoClient
-          client = MongoClient('mongodb://localhost:27018/')
+          client = MongoClient('mongodb://localhost:27017/')
           db = client['products_db']
           count = db['products'].count_documents({})
           print(f'Products count: {count}')
@@ -184,7 +199,7 @@ jobs:
           if [ -f data/unified_extracted_products.csv ]; then
             echo "✅ Data CSV found:"
             wc -l data/unified_extracted_products.csv
-            head -5 data/unified_extracted_products.csv
+            head -n 5 data/unified_extracted_products.csv
             lines=$(wc -l < data/unified_extracted_products.csv)
             if [ "$lines" -ge 38500 ] && [ "$lines" -le 38510 ]; then
               echo "✅ Expected ~38503 products"
@@ -193,7 +208,7 @@ jobs:
               exit 1
             fi
           else
-            echo "⚠️ No CSV file found"
+            echo "❌ No CSV file found"
             exit 1
           fi
 
@@ -202,7 +217,7 @@ jobs:
         run: |
           python -c "
           from pymongo import MongoClient
-          client = MongoClient('mongodb://localhost:27018/')
+          client = MongoClient('mongodb://localhost:27017/')
           count = client['products_db']['products'].count_documents({})
           print(f'✅ Products in DB: {count}')
           if count < 38500 or count > 38510:
