@@ -31,7 +31,7 @@ jobs:
 
     services:
       mongodb:
-        image: mongo:${{ matrix.mongodb-version || '5.0' }}
+        image: mongo:5.0
         ports:
           - 27017:27017
         options: >-
@@ -74,8 +74,8 @@ jobs:
 
       - name: 🛠️ Build and push Docker images
         run: |
-          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest -f Dockerfile.pipelinee .
-          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest -f Dockerfile.mongo .
+          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest -f Dockerfile.scraper .
+          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest -f Dockerfile.storage .
           docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest -f Dockerfile.api .
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
@@ -88,7 +88,7 @@ jobs:
           from pymongo import MongoClient
           client = MongoClient('mongodb://localhost:27017/')
           client.admin.command('ping')
-          echo '✅ MongoDB is up!'
+          print('✅ MongoDB is up!')
           "
 
       - name: 🚀 Run Pipeline with Docker Compose
@@ -179,13 +179,13 @@ jobs:
           client = MongoClient('mongodb://localhost:27017/')
           db = client['products_db']
           count = db['products'].count_documents({})
-          echo 'Products count: $count'
+          print(f'Products count: {count}')
           if count > 0:
               sample = db['products'].find_one()
-              echo 'Sample document: $sample'
+              print(f'Sample document: {sample}')
           else:
-              echo 'No products found'
-              exit 1
+              print('No products found')
+              exit(1)
           "
 
       - name: 📊 Validate pipeline outputs
