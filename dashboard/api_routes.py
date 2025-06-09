@@ -31,7 +31,7 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(parent_dir)
 
 # Import de vos classes existantes
-from pipeline import (
+from app.pipeline import (
     ScrapingConfig, StoreConfig, ProductData, 
     UnifiedExtractionPipeline, AgentFactory,
     DataValidator, ExportManager, ConfigManager

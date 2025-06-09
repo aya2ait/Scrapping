@@ -1,27 +1,8 @@
-# Use official Python image
 FROM python:3.9-slim
-
-# Install system dependencies if needed
-RUN apt-get update && apt-get install -y \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
 WORKDIR /app
-
-# Copy requirements
 COPY requirements.txt .
-
-# Install dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Copy application code
 COPY mongo.py .
-
-# Create data directory
 RUN mkdir -p data
-
-# Set environment variables
 ENV PYTHONPATH=/app
-
-# Command to run the storage script
-CMD ["python", "mongo.py"]
+CMD ["python", "mongo.py", "data/unified_extracted_products.csv"]

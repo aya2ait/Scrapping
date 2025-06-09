@@ -1,5 +1,4 @@
 services:
-  # MongoDB database
   mongodb:
     image: mongo:5.0
     container_name: ml-pipeline-mongodb
@@ -15,10 +14,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
-
-  # Data extraction service
   scraper:
-    image: safaehm/scrapping-scrapper:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.pipelinee
     container_name: ml-pipeline-scraper
     depends_on:
       mongodb:
@@ -29,12 +28,13 @@ services:
     networks:
       - ml-pipeline-network
     environment:
+      - MONGO_URI=mongodb://mongodb:27017/
       - MONGODB_URI=mongodb://mongodb:27017/
     restart: unless-stopped
-
-  # Data storage service
   storage:
-    image: safaehm/scrapping-storage:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.mongo
     container_name: ml-pipeline-storage
     depends_on:
       mongodb:
@@ -46,11 +46,13 @@ services:
     networks:
       - ml-pipeline-network
     environment:
+      - MONGO_URI=mongodb://mongodb:27017/
       - MONGODB_URI=mongodb://mongodb:27017/
-
-  # ML Analysis API
+    restart: unless-stopped
   api:
-    image: safaehm/scrapping-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     container_name: ml-pipeline-api
     depends_on:
       mongodb:
@@ -65,14 +67,11 @@ services:
     networks:
       - ml-pipeline-network
     environment:
+      - MONGO_URI=mongodb://mongodb:27017/
       - MONGODB_URI=mongodb://mongodb:27017/
     restart: unless-stopped
-
-# Define networks
 networks:
   ml-pipeline-network:
     driver: bridge
-
-# Define volumes
 volumes:
   mongodb_data:

@@ -13,6 +13,7 @@ import lightgbm as lgb
 from datetime import datetime, timedelta
 import logging
 import json
+import os
 from typing import Dict, List, Any, Optional, Tuple
 import warnings
 warnings.filterwarnings('ignore')
@@ -22,7 +23,7 @@ app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 
 # MongoDB Configuration
-MONGO_URI = 'mongodb://localhost:27017/'
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://mongodb:27017/')
 DATABASE_NAME = 'products_db'
 COLLECTION_NAME = 'products'
 

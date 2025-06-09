@@ -11,7 +11,7 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 sys.path.append(parent_dir)
 
 # Maintenant tu peux importer ton code
-from pipeline import (
+from app.pipeline import (
     ScrapingConfig, StoreConfig, UnifiedExtractionPipeline,
     DataValidator, ExportManager
 )

@@ -12,10 +12,10 @@ from bson import ObjectId
 class ProductsDB:
     """MongoDB storage for extracted products"""
     
-    def __init__(self, connection_string='mongodb://localhost:27017/', 
+    def __init__(self, connection_string=None, 
                  database_name='products_db', collection_name='products'):
         """Initialize MongoDB connection"""
-        self.connection_string = connection_string
+        self.connection_string = os.getenv('MONGO_URI', 'mongodb://mongodb:27017/') if connection_string is None else connection_string        
         self.database_name = database_name
         self.collection_name = collection_name
         self.client = None
@@ -469,6 +469,14 @@ def store_csv_to_database(csv_file: str, connection_string='mongodb://localhost:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
     try:
+        db = ProductsDB(connection_string, database_name, collection_name)
+        if db.connect():
+            existing_count = db.collection.count_documents({'extraction_timestamp': {'$exists': True}})
+            if existing_count >= len(pd.read_csv(csv_file)):
+                print(f"CSV {csv_file} already processed with {existing_count} records. Skipping.")
+                db.close()
+                return True
+            db.close()
         # Analyze CSV first
         df = analyze_csv_structure(csv_file)
         if df is None:
@@ -621,7 +629,7 @@ if __name__ == "__main__":
     csv_file = 'data/unified_extracted_products.csv'
     
     # MongoDB configuration
-    connection_string = 'mongodb://localhost:27017/'  # Default local MongoDB
+    connection_string = os.getenv('MONGO_URI', 'mongodb://mongodb:27017/')   
     database_name = 'products_db'
     collection_name = 'products'
     
