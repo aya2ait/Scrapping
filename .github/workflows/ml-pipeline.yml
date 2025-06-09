@@ -74,7 +74,7 @@ jobs:
 
       - name: 🔗 Verify MongoDB connection
         run: |
-          timeout 30 bash -c 'until nc -z localhost 27017; do sleep 1; done'
+          timeout 30 bash -c 'until nc -z localhost 27018; do sleep 1; done'
           python -c "
           from pymongo import MongoClient
           client = MongoClient('mongodb://localhost:27018/')
