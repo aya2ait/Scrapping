@@ -86,7 +86,7 @@ jobs:
           timeout 30 bash -c 'until nc -z localhost 27017; do sleep 1; done'
           python -c "
           from pymongo import MongoClient
-          client = MongoClient('mongodb://localhost:27017/')
+          client = MongoClient('mongodb://localhost:27018/')
           client.admin.command('ping')
           print('✅ MongoDB is up!')
           "
@@ -176,7 +176,7 @@ jobs:
         run: |
           python -c "
           from pymongo import MongoClient
-          client = MongoClient('mongodb://localhost:27017/')
+          client = MongoClient('mongodb://localhost:27018/')
           db = client['products_db']
           count = db['products'].count_documents({})
           print(f'Products count: {count}')
@@ -211,7 +211,7 @@ jobs:
         run: |
           python -c "
           from pymongo import MongoClient
-          client = MongoClient('mongodb://localhost:27017/')
+          client = MongoClient('mongodb://localhost:27018/')
           count = client['products_db']['products'].count_documents({})
           print(f'✅ Products in DB: {count}')
           if count < 38500 or count > 38510:
