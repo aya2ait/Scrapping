@@ -13936,3 +13936,265 @@ STORE === BY STORE ===
 2025-06-09 13:42:18,736 - UnifiedExtractionPipeline - INFO - Extracting from gymshark.com (shopify)
 2025-06-09 13:42:18,741 - ShopifyA2AAgent - INFO - Starting Shopify extraction for gymshark.com
 2025-06-09 13:42:18,743 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from gymshark.com
+2025-06-09 13:42:21,667 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from gymshark.com
+2025-06-09 13:42:24,328 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from gymshark.com
+2025-06-09 13:42:26,934 - ShopifyA2AAgent - INFO - Fetching Shopify page 4 from gymshark.com
+2025-06-09 13:42:29,608 - ShopifyA2AAgent - INFO - Fetching Shopify page 5 from gymshark.com
+2025-06-09 13:42:32,304 - ShopifyA2AAgent - INFO - Fetching Shopify page 6 from gymshark.com
+2025-06-09 13:42:35,179 - ShopifyA2AAgent - INFO - Fetching Shopify page 7 from gymshark.com
+2025-06-09 13:42:37,812 - ShopifyA2AAgent - INFO - Fetching Shopify page 8 from gymshark.com
+2025-06-09 13:42:40,430 - ShopifyA2AAgent - INFO - Fetching Shopify page 9 from gymshark.com
+2025-06-09 13:42:43,008 - ShopifyA2AAgent - INFO - Fetching Shopify page 10 from gymshark.com
+2025-06-09 13:42:45,543 - ShopifyA2AAgent - INFO - Fetching Shopify page 11 from gymshark.com
+2025-06-09 13:42:48,131 - ShopifyA2AAgent - INFO - Fetching Shopify page 12 from gymshark.com
+2025-06-09 13:42:50,711 - ShopifyA2AAgent - INFO - Fetching Shopify page 13 from gymshark.com
+2025-06-09 13:42:53,165 - ShopifyA2AAgent - INFO - Fetching Shopify page 14 from gymshark.com
+2025-06-09 13:42:56,075 - ShopifyA2AAgent - INFO - Fetching Shopify page 15 from gymshark.com
+2025-06-09 13:42:58,687 - ShopifyA2AAgent - INFO - Fetching Shopify page 16 from gymshark.com
+2025-06-09 13:43:01,334 - ShopifyA2AAgent - INFO - Fetching Shopify page 17 from gymshark.com
+2025-06-09 13:43:04,041 - ShopifyA2AAgent - INFO - Fetching Shopify page 18 from gymshark.com
+2025-06-09 13:43:06,819 - ShopifyA2AAgent - INFO - Fetching Shopify page 19 from gymshark.com
+2025-06-09 13:43:09,415 - ShopifyA2AAgent - INFO - Fetching Shopify page 20 from gymshark.com
+2025-06-09 13:43:12,409 - ShopifyA2AAgent - INFO - Shopify extraction completed for gymshark.com: 32089 products
+2025-06-09 13:43:12,454 - UnifiedExtractionPipeline - INFO - SUCCESS: gymshark.com: 32089 products extracted
+2025-06-09 13:43:15,454 - UnifiedExtractionPipeline - INFO - Extracting from casper.com (shopify)
+2025-06-09 13:43:15,455 - ShopifyA2AAgent - INFO - Starting Shopify extraction for casper.com
+2025-06-09 13:43:15,456 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from casper.com
+2025-06-09 13:43:16,193 - ShopifyA2AAgent - INFO - Shopify extraction completed for casper.com: 1232 products
+2025-06-09 13:43:16,196 - UnifiedExtractionPipeline - INFO - SUCCESS: casper.com: 1232 products extracted
+2025-06-09 13:43:22,947 - UnifiedExtractionPipeline - ERROR - ERROR: Error saving results: [Errno 13] Permission denied: 'unified_extracted_products.csv'
+2025-06-09 13:43:23,059 - UnifiedExtractionPipeline - INFO - COMPLETED === UNIFIED EXTRACTION STATISTICS ===
+2025-06-09 13:43:23,066 - UnifiedExtractionPipeline - INFO - STATS: Total products extracted: 38503
+2025-06-09 13:43:23,070 - UnifiedExtractionPipeline - INFO - STORES: Number of stores processed: 3
+2025-06-09 13:43:23,072 - UnifiedExtractionPipeline - INFO - AVAILABLE: Available products: 16642/38503 (43.2%)
+2025-06-09 13:43:23,073 - UnifiedExtractionPipeline - INFO - 
+PLATFORM === BY PLATFORM ===
+2025-06-09 13:43:23,073 - UnifiedExtractionPipeline - INFO - SHOPIFY: 38503 products (16642 available - 43.2%)
+2025-06-09 13:43:23,074 - UnifiedExtractionPipeline - INFO - 
+STORE === BY STORE ===
+2025-06-09 13:43:23,075 - UnifiedExtractionPipeline - INFO - allbirds.com (shopify): 5182 products (4408 available - 85.1%)
+2025-06-09 13:43:23,075 - UnifiedExtractionPipeline - INFO - gymshark.com (shopify): 32089 products (11379 available - 35.5%)
+2025-06-09 13:43:23,076 - UnifiedExtractionPipeline - INFO - casper.com (shopify): 1232 products (855 available - 69.4%)
+2025-06-09 13:43:27,647 - UnifiedExtractionPipeline - INFO - Starting unified extraction pipeline for 4 stores
+2025-06-09 13:43:27,647 - UnifiedExtractionPipeline - WARNING - SKIPPING 1 WooCommerce stores (temporarily disabled)
+2025-06-09 13:43:27,648 - UnifiedExtractionPipeline - WARNING - SKIPPED: barefootbuttons.com (WooCommerce)
+2025-06-09 13:43:27,649 - UnifiedExtractionPipeline - INFO - === Processing SHOPIFY stores ===
+2025-06-09 13:43:27,649 - UnifiedExtractionPipeline - INFO - Extracting from allbirds.com (shopify)
+2025-06-09 13:43:27,650 - ShopifyA2AAgent - INFO - Starting Shopify extraction for allbirds.com
+2025-06-09 13:43:27,651 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from allbirds.com
+2025-06-09 13:43:30,583 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from allbirds.com
+2025-06-09 13:43:33,439 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from allbirds.com
+2025-06-09 13:43:33,690 - ShopifyA2AAgent - INFO - Shopify extraction completed for allbirds.com: 5182 products
+2025-06-09 13:43:33,697 - UnifiedExtractionPipeline - INFO - SUCCESS: allbirds.com: 5182 products extracted
+2025-06-09 13:43:36,698 - UnifiedExtractionPipeline - INFO - Extracting from gymshark.com (shopify)
+2025-06-09 13:43:36,699 - ShopifyA2AAgent - INFO - Starting Shopify extraction for gymshark.com
+2025-06-09 13:43:36,699 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from gymshark.com
+2025-06-09 13:43:39,336 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from gymshark.com
+2025-06-09 13:43:41,891 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from gymshark.com
+2025-06-09 13:43:44,438 - ShopifyA2AAgent - INFO - Fetching Shopify page 4 from gymshark.com
+2025-06-09 13:43:47,071 - ShopifyA2AAgent - INFO - Fetching Shopify page 5 from gymshark.com
+2025-06-09 13:43:49,732 - ShopifyA2AAgent - INFO - Fetching Shopify page 6 from gymshark.com
+2025-06-09 13:43:52,277 - ShopifyA2AAgent - INFO - Fetching Shopify page 7 from gymshark.com
+2025-06-09 13:43:54,892 - ShopifyA2AAgent - INFO - Fetching Shopify page 8 from gymshark.com
+2025-06-09 13:43:57,609 - ShopifyA2AAgent - INFO - Fetching Shopify page 9 from gymshark.com
+2025-06-09 13:44:00,295 - ShopifyA2AAgent - INFO - Fetching Shopify page 10 from gymshark.com
+2025-06-09 13:44:03,491 - ShopifyA2AAgent - INFO - Fetching Shopify page 11 from gymshark.com
+2025-06-09 13:44:06,110 - ShopifyA2AAgent - INFO - Fetching Shopify page 12 from gymshark.com
+2025-06-09 13:44:08,708 - ShopifyA2AAgent - INFO - Fetching Shopify page 13 from gymshark.com
+2025-06-09 13:44:11,290 - ShopifyA2AAgent - INFO - Fetching Shopify page 14 from gymshark.com
+2025-06-09 13:44:14,040 - ShopifyA2AAgent - INFO - Fetching Shopify page 15 from gymshark.com
+2025-06-09 13:44:16,687 - ShopifyA2AAgent - INFO - Fetching Shopify page 16 from gymshark.com
+2025-06-09 13:44:19,413 - ShopifyA2AAgent - INFO - Fetching Shopify page 17 from gymshark.com
+2025-06-09 13:44:22,230 - ShopifyA2AAgent - INFO - Fetching Shopify page 18 from gymshark.com
+2025-06-09 13:44:24,730 - ShopifyA2AAgent - INFO - Fetching Shopify page 19 from gymshark.com
+2025-06-09 13:44:27,289 - ShopifyA2AAgent - INFO - Fetching Shopify page 20 from gymshark.com
+2025-06-09 13:44:30,360 - ShopifyA2AAgent - INFO - Shopify extraction completed for gymshark.com: 32089 products
+2025-06-09 13:44:30,410 - UnifiedExtractionPipeline - INFO - SUCCESS: gymshark.com: 32089 products extracted
+2025-06-09 13:44:33,411 - UnifiedExtractionPipeline - INFO - Extracting from casper.com (shopify)
+2025-06-09 13:44:33,412 - ShopifyA2AAgent - INFO - Starting Shopify extraction for casper.com
+2025-06-09 13:44:33,413 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from casper.com
+2025-06-09 13:44:34,211 - ShopifyA2AAgent - INFO - Shopify extraction completed for casper.com: 1232 products
+2025-06-09 13:44:34,221 - UnifiedExtractionPipeline - INFO - SUCCESS: casper.com: 1232 products extracted
+2025-06-09 13:44:43,348 - UnifiedExtractionPipeline - ERROR - ERROR: Error saving results: [Errno 13] Permission denied: 'unified_extracted_products.csv'
+2025-06-09 13:44:43,439 - UnifiedExtractionPipeline - INFO - COMPLETED === UNIFIED EXTRACTION STATISTICS ===
+2025-06-09 13:44:43,440 - UnifiedExtractionPipeline - INFO - STATS: Total products extracted: 38503
+2025-06-09 13:44:43,441 - UnifiedExtractionPipeline - INFO - STORES: Number of stores processed: 3
+2025-06-09 13:44:43,441 - UnifiedExtractionPipeline - INFO - AVAILABLE: Available products: 16642/38503 (43.2%)
+2025-06-09 13:44:43,442 - UnifiedExtractionPipeline - INFO - 
+PLATFORM === BY PLATFORM ===
+2025-06-09 13:44:43,443 - UnifiedExtractionPipeline - INFO - SHOPIFY: 38503 products (16642 available - 43.2%)
+2025-06-09 13:44:43,444 - UnifiedExtractionPipeline - INFO - 
+STORE === BY STORE ===
+2025-06-09 13:44:43,444 - UnifiedExtractionPipeline - INFO - allbirds.com (shopify): 5182 products (4408 available - 85.1%)
+2025-06-09 13:44:43,445 - UnifiedExtractionPipeline - INFO - gymshark.com (shopify): 32089 products (11379 available - 35.5%)
+2025-06-09 13:44:43,445 - UnifiedExtractionPipeline - INFO - casper.com (shopify): 1232 products (855 available - 69.4%)
+2025-06-09 13:44:48,741 - UnifiedExtractionPipeline - INFO - Starting unified extraction pipeline for 4 stores
+2025-06-09 13:44:48,742 - UnifiedExtractionPipeline - WARNING - SKIPPING 1 WooCommerce stores (temporarily disabled)
+2025-06-09 13:44:48,743 - UnifiedExtractionPipeline - WARNING - SKIPPED: barefootbuttons.com (WooCommerce)
+2025-06-09 13:44:48,743 - UnifiedExtractionPipeline - INFO - === Processing SHOPIFY stores ===
+2025-06-09 13:44:48,744 - UnifiedExtractionPipeline - INFO - Extracting from allbirds.com (shopify)
+2025-06-09 13:44:48,745 - ShopifyA2AAgent - INFO - Starting Shopify extraction for allbirds.com
+2025-06-09 13:44:48,746 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from allbirds.com
+2025-06-09 13:44:51,780 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from allbirds.com
+2025-06-09 13:44:54,450 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from allbirds.com
+2025-06-09 13:44:54,792 - ShopifyA2AAgent - INFO - Shopify extraction completed for allbirds.com: 5182 products
+2025-06-09 13:44:54,800 - UnifiedExtractionPipeline - INFO - SUCCESS: allbirds.com: 5182 products extracted
+2025-06-09 13:44:57,807 - UnifiedExtractionPipeline - INFO - Extracting from gymshark.com (shopify)
+2025-06-09 13:44:57,807 - ShopifyA2AAgent - INFO - Starting Shopify extraction for gymshark.com
+2025-06-09 13:44:57,808 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from gymshark.com
+2025-06-09 13:45:00,527 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from gymshark.com
+2025-06-09 13:45:03,155 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from gymshark.com
+2025-06-09 13:45:05,743 - ShopifyA2AAgent - INFO - Fetching Shopify page 4 from gymshark.com
+2025-06-09 13:45:08,517 - ShopifyA2AAgent - INFO - Fetching Shopify page 5 from gymshark.com
+2025-06-09 13:45:11,156 - ShopifyA2AAgent - INFO - Fetching Shopify page 6 from gymshark.com
+2025-06-09 13:45:13,802 - ShopifyA2AAgent - INFO - Fetching Shopify page 7 from gymshark.com
+2025-06-09 13:45:16,303 - ShopifyA2AAgent - INFO - Fetching Shopify page 8 from gymshark.com
+2025-06-09 13:45:18,827 - ShopifyA2AAgent - INFO - Fetching Shopify page 9 from gymshark.com
+2025-06-09 13:45:21,521 - ShopifyA2AAgent - INFO - Fetching Shopify page 10 from gymshark.com
+2025-06-09 13:45:24,109 - ShopifyA2AAgent - INFO - Fetching Shopify page 11 from gymshark.com
+2025-06-09 13:45:26,762 - ShopifyA2AAgent - INFO - Fetching Shopify page 12 from gymshark.com
+2025-06-09 13:45:29,229 - ShopifyA2AAgent - INFO - Fetching Shopify page 13 from gymshark.com
+2025-06-09 13:45:31,824 - ShopifyA2AAgent - INFO - Fetching Shopify page 14 from gymshark.com
+2025-06-09 13:45:34,735 - ShopifyA2AAgent - INFO - Fetching Shopify page 15 from gymshark.com
+2025-06-09 13:45:37,407 - ShopifyA2AAgent - INFO - Fetching Shopify page 16 from gymshark.com
+2025-06-09 13:45:40,060 - ShopifyA2AAgent - INFO - Fetching Shopify page 17 from gymshark.com
+2025-06-09 13:45:42,643 - ShopifyA2AAgent - INFO - Fetching Shopify page 18 from gymshark.com
+2025-06-09 13:45:45,386 - ShopifyA2AAgent - INFO - Fetching Shopify page 19 from gymshark.com
+2025-06-09 13:45:48,041 - ShopifyA2AAgent - INFO - Fetching Shopify page 20 from gymshark.com
+2025-06-09 13:45:51,102 - ShopifyA2AAgent - INFO - Shopify extraction completed for gymshark.com: 32089 products
+2025-06-09 13:45:51,146 - UnifiedExtractionPipeline - INFO - SUCCESS: gymshark.com: 32089 products extracted
+2025-06-09 13:45:54,147 - UnifiedExtractionPipeline - INFO - Extracting from casper.com (shopify)
+2025-06-09 13:45:54,148 - ShopifyA2AAgent - INFO - Starting Shopify extraction for casper.com
+2025-06-09 13:45:54,148 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from casper.com
+2025-06-09 13:45:54,835 - ShopifyA2AAgent - INFO - Shopify extraction completed for casper.com: 1232 products
+2025-06-09 13:45:54,838 - UnifiedExtractionPipeline - INFO - SUCCESS: casper.com: 1232 products extracted
+2025-06-09 13:46:00,861 - UnifiedExtractionPipeline - ERROR - ERROR: Error saving results: [Errno 13] Permission denied: 'unified_extracted_products.csv'
+2025-06-09 13:46:00,927 - UnifiedExtractionPipeline - INFO - COMPLETED === UNIFIED EXTRACTION STATISTICS ===
+2025-06-09 13:46:00,928 - UnifiedExtractionPipeline - INFO - STATS: Total products extracted: 38503
+2025-06-09 13:46:00,928 - UnifiedExtractionPipeline - INFO - STORES: Number of stores processed: 3
+2025-06-09 13:46:00,929 - UnifiedExtractionPipeline - INFO - AVAILABLE: Available products: 16642/38503 (43.2%)
+2025-06-09 13:46:00,930 - UnifiedExtractionPipeline - INFO - 
+PLATFORM === BY PLATFORM ===
+2025-06-09 13:46:00,932 - UnifiedExtractionPipeline - INFO - SHOPIFY: 38503 products (16642 available - 43.2%)
+2025-06-09 13:46:00,932 - UnifiedExtractionPipeline - INFO - 
+STORE === BY STORE ===
+2025-06-09 13:46:00,933 - UnifiedExtractionPipeline - INFO - allbirds.com (shopify): 5182 products (4408 available - 85.1%)
+2025-06-09 13:46:00,934 - UnifiedExtractionPipeline - INFO - gymshark.com (shopify): 32089 products (11379 available - 35.5%)
+2025-06-09 13:46:00,935 - UnifiedExtractionPipeline - INFO - casper.com (shopify): 1232 products (855 available - 69.4%)
+2025-06-09 13:46:04,225 - UnifiedExtractionPipeline - INFO - Starting unified extraction pipeline for 4 stores
+2025-06-09 13:46:04,226 - UnifiedExtractionPipeline - WARNING - SKIPPING 1 WooCommerce stores (temporarily disabled)
+2025-06-09 13:46:04,227 - UnifiedExtractionPipeline - WARNING - SKIPPED: barefootbuttons.com (WooCommerce)
+2025-06-09 13:46:04,227 - UnifiedExtractionPipeline - INFO - === Processing SHOPIFY stores ===
+2025-06-09 13:46:04,228 - UnifiedExtractionPipeline - INFO - Extracting from allbirds.com (shopify)
+2025-06-09 13:46:04,229 - ShopifyA2AAgent - INFO - Starting Shopify extraction for allbirds.com
+2025-06-09 13:46:04,233 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from allbirds.com
+2025-06-09 13:46:07,010 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from allbirds.com
+2025-06-09 13:46:09,593 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from allbirds.com
+2025-06-09 13:46:09,847 - ShopifyA2AAgent - INFO - Shopify extraction completed for allbirds.com: 5182 products
+2025-06-09 13:46:09,851 - UnifiedExtractionPipeline - INFO - SUCCESS: allbirds.com: 5182 products extracted
+2025-06-09 13:46:12,900 - UnifiedExtractionPipeline - INFO - Extracting from gymshark.com (shopify)
+2025-06-09 13:46:12,975 - ShopifyA2AAgent - INFO - Starting Shopify extraction for gymshark.com
+2025-06-09 13:46:12,976 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from gymshark.com
+2025-06-09 13:46:15,795 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from gymshark.com
+2025-06-09 13:46:18,330 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from gymshark.com
+2025-06-09 13:46:20,864 - ShopifyA2AAgent - INFO - Fetching Shopify page 4 from gymshark.com
+2025-06-09 13:46:23,387 - ShopifyA2AAgent - INFO - Fetching Shopify page 5 from gymshark.com
+2025-06-09 13:46:25,973 - ShopifyA2AAgent - INFO - Fetching Shopify page 6 from gymshark.com
+2025-06-09 13:46:28,412 - ShopifyA2AAgent - INFO - Fetching Shopify page 7 from gymshark.com
+2025-06-09 13:46:30,992 - ShopifyA2AAgent - INFO - Fetching Shopify page 8 from gymshark.com
+2025-06-09 13:46:33,580 - ShopifyA2AAgent - INFO - Fetching Shopify page 9 from gymshark.com
+2025-06-09 13:46:36,159 - ShopifyA2AAgent - INFO - Fetching Shopify page 10 from gymshark.com
+2025-06-09 13:46:38,781 - ShopifyA2AAgent - INFO - Fetching Shopify page 11 from gymshark.com
+2025-06-09 13:46:41,426 - ShopifyA2AAgent - INFO - Fetching Shopify page 12 from gymshark.com
+2025-06-09 13:46:44,001 - ShopifyA2AAgent - INFO - Fetching Shopify page 13 from gymshark.com
+2025-06-09 13:46:46,600 - ShopifyA2AAgent - INFO - Fetching Shopify page 14 from gymshark.com
+2025-06-09 13:46:49,128 - ShopifyA2AAgent - INFO - Fetching Shopify page 15 from gymshark.com
+2025-06-09 13:46:51,938 - ShopifyA2AAgent - INFO - Fetching Shopify page 16 from gymshark.com
+2025-06-09 13:46:54,547 - ShopifyA2AAgent - INFO - Fetching Shopify page 17 from gymshark.com
+2025-06-09 13:46:57,159 - ShopifyA2AAgent - INFO - Fetching Shopify page 18 from gymshark.com
+2025-06-09 13:46:59,845 - ShopifyA2AAgent - INFO - Fetching Shopify page 19 from gymshark.com
+2025-06-09 13:47:02,450 - ShopifyA2AAgent - INFO - Fetching Shopify page 20 from gymshark.com
+2025-06-09 13:47:05,426 - ShopifyA2AAgent - INFO - Shopify extraction completed for gymshark.com: 32089 products
+2025-06-09 13:47:05,466 - UnifiedExtractionPipeline - INFO - SUCCESS: gymshark.com: 32089 products extracted
+2025-06-09 13:47:08,467 - UnifiedExtractionPipeline - INFO - Extracting from casper.com (shopify)
+2025-06-09 13:47:08,467 - ShopifyA2AAgent - INFO - Starting Shopify extraction for casper.com
+2025-06-09 13:47:08,468 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from casper.com
+2025-06-09 13:47:08,870 - ShopifyA2AAgent - INFO - Shopify extraction completed for casper.com: 1232 products
+2025-06-09 13:47:08,873 - UnifiedExtractionPipeline - INFO - SUCCESS: casper.com: 1232 products extracted
+2025-06-09 13:47:14,380 - UnifiedExtractionPipeline - ERROR - ERROR: Error saving results: [Errno 13] Permission denied: 'unified_extracted_products.csv'
+2025-06-09 13:47:14,450 - UnifiedExtractionPipeline - INFO - COMPLETED === UNIFIED EXTRACTION STATISTICS ===
+2025-06-09 13:47:14,451 - UnifiedExtractionPipeline - INFO - STATS: Total products extracted: 38503
+2025-06-09 13:47:14,451 - UnifiedExtractionPipeline - INFO - STORES: Number of stores processed: 3
+2025-06-09 13:47:14,452 - UnifiedExtractionPipeline - INFO - AVAILABLE: Available products: 16642/38503 (43.2%)
+2025-06-09 13:47:14,453 - UnifiedExtractionPipeline - INFO - 
+PLATFORM === BY PLATFORM ===
+2025-06-09 13:47:14,453 - UnifiedExtractionPipeline - INFO - SHOPIFY: 38503 products (16642 available - 43.2%)
+2025-06-09 13:47:14,454 - UnifiedExtractionPipeline - INFO - 
+STORE === BY STORE ===
+2025-06-09 13:47:14,454 - UnifiedExtractionPipeline - INFO - allbirds.com (shopify): 5182 products (4408 available - 85.1%)
+2025-06-09 13:47:14,455 - UnifiedExtractionPipeline - INFO - gymshark.com (shopify): 32089 products (11379 available - 35.5%)
+2025-06-09 13:47:14,455 - UnifiedExtractionPipeline - INFO - casper.com (shopify): 1232 products (855 available - 69.4%)
+2025-06-09 13:47:17,226 - UnifiedExtractionPipeline - INFO - Starting unified extraction pipeline for 4 stores
+2025-06-09 13:47:17,227 - UnifiedExtractionPipeline - WARNING - SKIPPING 1 WooCommerce stores (temporarily disabled)
+2025-06-09 13:47:17,227 - UnifiedExtractionPipeline - WARNING - SKIPPED: barefootbuttons.com (WooCommerce)
+2025-06-09 13:47:17,227 - UnifiedExtractionPipeline - INFO - === Processing SHOPIFY stores ===
+2025-06-09 13:47:17,228 - UnifiedExtractionPipeline - INFO - Extracting from allbirds.com (shopify)
+2025-06-09 13:47:17,229 - ShopifyA2AAgent - INFO - Starting Shopify extraction for allbirds.com
+2025-06-09 13:47:17,229 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from allbirds.com
+2025-06-09 13:47:20,203 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from allbirds.com
+2025-06-09 13:47:22,919 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from allbirds.com
+2025-06-09 13:47:23,140 - ShopifyA2AAgent - INFO - Shopify extraction completed for allbirds.com: 5182 products
+2025-06-09 13:47:23,145 - UnifiedExtractionPipeline - INFO - SUCCESS: allbirds.com: 5182 products extracted
+2025-06-09 13:47:26,150 - UnifiedExtractionPipeline - INFO - Extracting from gymshark.com (shopify)
+2025-06-09 13:47:26,151 - ShopifyA2AAgent - INFO - Starting Shopify extraction for gymshark.com
+2025-06-09 13:47:26,152 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from gymshark.com
+2025-06-09 13:47:29,162 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from gymshark.com
+2025-06-09 13:47:31,664 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from gymshark.com
+2025-06-09 13:47:34,261 - ShopifyA2AAgent - INFO - Fetching Shopify page 4 from gymshark.com
+2025-06-09 13:47:36,929 - ShopifyA2AAgent - INFO - Fetching Shopify page 5 from gymshark.com
+2025-06-09 13:47:39,632 - ShopifyA2AAgent - INFO - Fetching Shopify page 6 from gymshark.com
+2025-06-09 13:47:42,313 - ShopifyA2AAgent - INFO - Fetching Shopify page 7 from gymshark.com
+2025-06-09 13:47:44,886 - ShopifyA2AAgent - INFO - Fetching Shopify page 8 from gymshark.com
+2025-06-09 13:47:47,780 - ShopifyA2AAgent - INFO - Fetching Shopify page 9 from gymshark.com
+2025-06-09 13:47:50,326 - ShopifyA2AAgent - INFO - Fetching Shopify page 10 from gymshark.com
+2025-06-09 13:47:53,038 - ShopifyA2AAgent - INFO - Fetching Shopify page 11 from gymshark.com
+2025-06-09 13:47:55,635 - ShopifyA2AAgent - INFO - Fetching Shopify page 12 from gymshark.com
+2025-06-09 13:47:58,079 - ShopifyA2AAgent - INFO - Fetching Shopify page 13 from gymshark.com
+2025-06-09 13:48:00,564 - ShopifyA2AAgent - INFO - Fetching Shopify page 14 from gymshark.com
+2025-06-09 13:48:03,237 - ShopifyA2AAgent - INFO - Fetching Shopify page 15 from gymshark.com
+2025-06-09 13:48:05,803 - ShopifyA2AAgent - INFO - Fetching Shopify page 16 from gymshark.com
+2025-06-09 13:48:08,661 - ShopifyA2AAgent - INFO - Fetching Shopify page 17 from gymshark.com
+2025-06-09 13:48:11,135 - ShopifyA2AAgent - INFO - Fetching Shopify page 18 from gymshark.com
+2025-06-09 13:48:13,858 - ShopifyA2AAgent - INFO - Fetching Shopify page 19 from gymshark.com
+2025-06-09 13:48:16,434 - ShopifyA2AAgent - INFO - Fetching Shopify page 20 from gymshark.com
+2025-06-09 13:48:19,638 - ShopifyA2AAgent - INFO - Shopify extraction completed for gymshark.com: 32089 products
+2025-06-09 13:48:19,690 - UnifiedExtractionPipeline - INFO - SUCCESS: gymshark.com: 32089 products extracted
+2025-06-09 13:48:22,691 - UnifiedExtractionPipeline - INFO - Extracting from casper.com (shopify)
+2025-06-09 13:48:22,692 - ShopifyA2AAgent - INFO - Starting Shopify extraction for casper.com
+2025-06-09 13:48:22,692 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from casper.com
+2025-06-09 13:48:24,379 - ShopifyA2AAgent - INFO - Shopify extraction completed for casper.com: 1232 products
+2025-06-09 13:48:24,382 - UnifiedExtractionPipeline - INFO - SUCCESS: casper.com: 1232 products extracted
+2025-06-09 13:48:30,243 - UnifiedExtractionPipeline - ERROR - ERROR: Error saving results: [Errno 13] Permission denied: 'unified_extracted_products.csv'
+2025-06-09 13:48:30,305 - UnifiedExtractionPipeline - INFO - COMPLETED === UNIFIED EXTRACTION STATISTICS ===
+2025-06-09 13:48:30,306 - UnifiedExtractionPipeline - INFO - STATS: Total products extracted: 38503
+2025-06-09 13:48:30,308 - UnifiedExtractionPipeline - INFO - STORES: Number of stores processed: 3
+2025-06-09 13:48:30,309 - UnifiedExtractionPipeline - INFO - AVAILABLE: Available products: 16642/38503 (43.2%)
+2025-06-09 13:48:30,311 - UnifiedExtractionPipeline - INFO - 
+PLATFORM === BY PLATFORM ===
+2025-06-09 13:48:30,312 - UnifiedExtractionPipeline - INFO - SHOPIFY: 38503 products (16642 available - 43.2%)
+2025-06-09 13:48:30,312 - UnifiedExtractionPipeline - INFO - 
+STORE === BY STORE ===
+2025-06-09 13:48:30,313 - UnifiedExtractionPipeline - INFO - allbirds.com (shopify): 5182 products (4408 available - 85.1%)
+2025-06-09 13:48:30,313 - UnifiedExtractionPipeline - INFO - gymshark.com (shopify): 32089 products (11379 available - 35.5%)
+2025-06-09 13:48:30,314 - UnifiedExtractionPipeline - INFO - casper.com (shopify): 1232 products (855 available - 69.4%)
+2025-06-09 13:48:33,683 - UnifiedExtractionPipeline - INFO - Starting unified extraction pipeline for 4 stores
+2025-06-09 13:48:33,684 - UnifiedExtractionPipeline - WARNING - SKIPPING 1 WooCommerce stores (temporarily disabled)
+2025-06-09 13:48:33,684 - UnifiedExtractionPipeline - WARNING - SKIPPED: barefootbuttons.com (WooCommerce)
+2025-06-09 13:48:33,685 - UnifiedExtractionPipeline - INFO - === Processing SHOPIFY stores ===
+2025-06-09 13:48:33,686 - UnifiedExtractionPipeline - INFO - Extracting from allbirds.com (shopify)
+2025-06-09 13:48:33,686 - ShopifyA2AAgent - INFO - Starting Shopify extraction for allbirds.com
+2025-06-09 13:48:33,687 - ShopifyA2AAgent - INFO - Fetching Shopify page 1 from allbirds.com
+2025-06-09 13:48:36,588 - ShopifyA2AAgent - INFO - Fetching Shopify page 2 from allbirds.com
+2025-06-09 13:48:39,565 - ShopifyA2AAgent - INFO - Fetching Shopify page 3 from allbirds.com
+2025-06-09 13:48:39,908 - ShopifyA2AAgent - INFO - Shopify extraction completed for allbirds.com: 5182 products
+2025-06-09 13:48:39,917 - UnifiedExtractionPipeline - INFO - SUCCESS: allbirds.com: 5182 products extracted
