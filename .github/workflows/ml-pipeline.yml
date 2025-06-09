@@ -74,8 +74,8 @@ jobs:
 
       - name: 🛠️ Build and push Docker images
         run: |
-          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest -f Dockerfile.scraper .
-          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest -f Dockerfile.storage .
+          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest -f Dockerfile.piepelinee .
+          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest -f Dockerfile.mongo .
           docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest -f Dockerfile.api .
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
