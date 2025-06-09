@@ -1,77 +1,63 @@
 services:
   mongodb:
     image: mongo:5.0
-    container_name: ml-pipeline-mongodb
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
-    networks:
-      - ml-pipeline-network
+      - scrapping_mongodb_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 40s
-  scraper:
-    build:
-      context: .
-      dockerfile: Dockerfile.pipelinee
-    container_name: ml-pipeline-scraper
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
     networks:
       - ml-pipeline-network
+  scraper:
+    image: safaehm/ecommerce-scraper:latest
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
-      - MONGODB_URI=mongodb://mongodb:27017/
-    restart: unless-stopped
+    command: ["sh", "-c", "python3 pipeline.py && touch /data/scraper_done && ls -l /data && tail -f /app/logs/unified_extraction_pipeline.log"]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/scraper_done"]
+      interval: 10s
+      timeout: 5s
+      retries: 120
+    networks:
+      - ml-pipeline-network
   storage:
-    build:
-      context: .
-      dockerfile: Dockerfile.mongo
-    container_name: ml-pipeline-storage
+    image: safaehm/ecommerce-storage:latest
     depends_on:
       mongodb:
         condition: service_healthy
       scraper:
-        condition: service_started
+        condition: service_healthy
     volumes:
-      - ./data:/app/data
-    networks:
-      - ml-pipeline-network
+      - ./data:/data
+      - ./logs:/app/logs
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
-      - MONGODB_URI=mongodb://mongodb:27017/
-    restart: unless-stopped
+    command: ["sh", "-c", "sleep 10 && ls -l /data && python mongo.py /data/unified_extracted_products.csv"]
+    networks:
+      - ml-pipeline-network
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: ml-pipeline-api
+    image: safaehm/ecommerce-api:latest
     depends_on:
-      mongodb:
-        condition: service_healthy
       storage:
         condition: service_started
     ports:
       - "5000:5000"
     volumes:
-      - ./data:/app/data
+      - ./data:/data
       - ./mlruns:/app/mlruns
-    networks:
-      - ml-pipeline-network
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
-      - MONGODB_URI=mongodb://mongodb:27017/
-    restart: unless-stopped
+    networks:
+      - ml-pipeline-network
 networks:
   ml-pipeline-network:
     driver: bridge
 volumes:
-  mongodb_data:
+  scrapping_mongodb_data:

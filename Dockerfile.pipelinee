@@ -1,21 +1,10 @@
-# Build stage
-FROM python:3.9-slim AS builder
-RUN apt-get update && apt-get install -y \
-    python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.9-slim
 WORKDIR /app
-COPY requirements.txt .
-RUN pip3 install --no-cache-dir --user -r requirements.txt --timeout=100 --retries=5
-
-# Final stage
-FROM selenium/standalone-chrome:latest
-USER root
-WORKDIR /app
-COPY --from=builder /root/.local /root/.local
+COPY scrapping_requirements.txt .
 COPY app/pipeline.py .
-RUN mkdir -p data logs
-ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/app
-ENV DISPLAY=:99
-USER seluser
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir -r scrapping_requirements.txt
 CMD ["python", "pipeline.py"]

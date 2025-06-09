@@ -659,16 +659,19 @@ class UnifiedExtractionPipeline:
             self.logger.info(f"SUCCESS: Results saved to {filename}")
             
             # Sauvegarde par plateforme
+            import os
+            base_dir = os.path.dirname(filename)
             for platform in df['platform'].unique():
                 platform_df = df[df['platform'] == platform]
-                platform_file = f"{platform}_{filename}"
+                platform_file = os.path.join(base_dir, f"{platform}_unified_extracted_products.csv")
                 platform_df.to_csv(platform_file, index=False, encoding='utf-8')
                 self.logger.info(f"SUCCESS: {platform.title()} results saved to {platform_file}")
-            
-            # Backup avec timestamp
+        
+        # Backup avec timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = f"backup_{timestamp}_{filename}"
+            backup_file = os.path.join(base_dir, f"backup_{timestamp}_unified_extracted_products.csv")
             df.to_csv(backup_file, index=False, encoding='utf-8')
+            self.logger.info(f"SUCCESS: Backup saved to {backup_file}")
             
         except Exception as e:
             self.logger.error(f"ERROR: Error saving results: {e}")
@@ -716,12 +719,16 @@ class UnifiedExtractionPipeline:
 
 # --- Configuration et Execution ---
 if __name__ == "__main__":
+    os.makedirs('/app/logs', exist_ok=True)
+
     # Configuration du logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler('logs/unified_extraction_pipeline.log'),
+
+
+            logging.FileHandler('/app/logs/unified_extraction_pipeline.log'),
             logging.StreamHandler()
         ]
     )
@@ -789,7 +796,7 @@ if __name__ == "__main__":
         pipeline = UnifiedExtractionPipeline(scraping_config)
         extracted_products = pipeline.extract_all_stores(
             stores=STORES,
-            output_file="unified_extracted_products.csv"
+            output_file="/data/unified_extracted_products.csv"
         )
         
         print("\n" + "=" * 60)
