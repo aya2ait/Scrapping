@@ -20,17 +20,18 @@ on:
 
 env:
   PYTHON_VERSION: '3.9'
-  MONGODB_VERSION: '5.0'
   DOCKERHUB_USERNAME: safaehm
 
 jobs:
   ml-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      MONGODB_VERSION: '5.0'
 
     services:
       mongodb:
-        image: mongo:${{ env.MONGODB_VERSION }}
+        image: mongo:${{ matrix.mongodb-version || '5.0' }}
         ports:
           - 27017:27017
         options: >-
@@ -73,8 +74,8 @@ jobs:
 
       - name: 🛠️ Build and push Docker images
         run: |
-          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest -f Dockerfile.scraper .
-          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest -f Dockerfile.storage .
+          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest -f Dockerfile.pipelinee .
+          docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest -f Dockerfile.mongo .
           docker build -t ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest -f Dockerfile.api .
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
@@ -87,7 +88,7 @@ jobs:
           from pymongo import MongoClient
           client = MongoClient('mongodb://localhost:27017/')
           client.admin.command('ping')
-          print('✅ MongoDB is up!')
+          echo '✅ MongoDB is up!'
           "
 
       - name: 🚀 Run Pipeline with Docker Compose
@@ -178,13 +179,13 @@ jobs:
           client = MongoClient('mongodb://localhost:27017/')
           db = client['products_db']
           count = db['products'].count_documents({})
-          print(f'Products count: {count}')
+          echo 'Products count: $count'
           if count > 0:
               sample = db['products'].find_one()
-              print(f'Sample document: {sample}')
+              echo 'Sample document: $sample'
           else:
-              print('No products found')
-              exit(1)
+              echo 'No products found'
+              exit 1
           "
 
       - name: 📊 Validate pipeline outputs
@@ -194,10 +195,10 @@ jobs:
             wc -l data/unified_extracted_products.csv
             head -5 data/unified_extracted_products.csv
             lines=$(wc -l < data/unified_extracted_products.csv)
-            if [ "$lines" -lt 38504 ]; then
+            if [ "$lines" -ge 38500 ] && [ "$lines" -le 38510 ]; then
               echo "✅ Expected ~38503 products"
             else
-              echo "❌ Unexpected CSV size"
+              echo "❌ Unexpected CSV size: $lines"
               exit 1
             fi
           else
@@ -213,10 +214,9 @@ jobs:
           client = MongoClient('mongodb://localhost:27017/')
           count = client['products_db']['products'].count_documents({})
           print(f'✅ Products in DB: {count}')
-          if count < 38500; then
-              print('❌ Expected ~38503 products in MongoDB')
+          if count < 38500 or count > 38510:
+              print(f'❌ Expected ~38503 products in MongoDB, got {count}')
               exit(1)
-          fi
           "
 
       - name: 🧪 Test API endpoints
