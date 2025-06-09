@@ -114,9 +114,6 @@ jobs:
           services:
             scraper:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
-              depends_on:
-                mongodb:
-                  condition: service_healthy
               volumes:
                 - ./data:/app/data
                 - ./logs:/app/logs
@@ -128,8 +125,6 @@ jobs:
             storage:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
               depends_on:
-                mongodb:
-                  condition: service_healthy
                 scraper:
                   condition: service_started
               volumes:
@@ -142,8 +137,6 @@ jobs:
             api:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest
               depends_on:
-                mongodb:
-                  condition: service_healthy
                 storage:
                   condition: service_started
               ports:
