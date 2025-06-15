@@ -137,7 +137,7 @@ jobs:
                 - ./logs:/app/logs
               environment:
                 - MONGO_URI=mongodb://mongodb:27017/
-              command: ["sh", "-c", "ls -l /data && python mongo.py /data/unified_extracted_products.csv >> /app/logs/storage.log 2>&1 && touch /data/storage_done || echo 'mongo.py failed' >> /app/logs/storage.log"]
+              command: ["sh", "-c", "ls -l /data && python mongo.py /data/unified_extracted_products.csv >> /app/logs/storage.log 2>&1 && touch /data/storage_done && sleep infinity || echo 'mongo.py failed' >> /app/logs/storage.log"]
               healthcheck:
                 test: ["CMD", "test", "-f", "/data/storage_done"]
                 interval: 10s
