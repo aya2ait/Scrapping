@@ -26,19 +26,6 @@ jobs:
   ml-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      MONGODB_VERSION: '5.0'
-
-    services:
-      mongodb:
-        image: mongo:5.0
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: 📥 Checkout repository
@@ -96,89 +83,22 @@ jobs:
           SKIP_SCRAPER: ${{ github.event.inputs.skip_scraper || 'false' }}
           SKIP_STORAGE: ${{ github.event.inputs.skip_storage || 'false' }}
         run: |
-          # Create docker-compose-ci.yml
-          cat > docker-compose-ci.yml << EOF
-          services:
-            mongodb:
-              image: mongo:${{ env.MONGODB_VERSION }}
-              volumes:
-                - mongodb_data:/data/db
-              healthcheck:
-                test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-                interval: 10s
-                timeout: 5s
-                retries: 5
-              networks:
-                - ml-pipeline-network
-            scraper:
-              image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
-              volumes:
-                - ./data:/data
-                - ./logs:/app/logs
-              environment:
-                - MONGO_URI=mongodb://mongodb:27017/
-              command: ["sh", "-c", "python3 pipeline.py && touch /data/scraper_done && ls -l /data && tail -f /app/logs/unified_extraction_pipeline.log"]
-              healthcheck:
-                test: ["CMD", "test", "-f", "/data/scraper_done"]
-                interval: 10s
-                timeout: 5s
-                retries: 180
-              networks:
-                - ml-pipeline-network
-            storage:
-              image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
-              depends_on:
-                mongodb:
-                  condition: service_healthy
-                scraper:
-                  condition: service_healthy
-              volumes:
-                - ./data:/data
-                - ./logs:/app/logs
-              environment:
-                - MONGO_URI=mongodb://mongodb:27017/
-              command: ["sh", "-c", "ls -l /data && python mongo.py /data/unified_extracted_products.csv >> /app/logs/storage.log 2>&1 && touch /data/storage_done || echo 'mongo.py failed' >> /app/logs/storage.log"]
-              healthcheck:
-                test: ["CMD", "test", "-f", "/data/storage_done"]
-                interval: 10s
-                timeout: 5s
-                retries: 60
-              networks:
-                - ml-pipeline-network
-            api:
-              image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest
-              depends_on:
-                storage:
-                  condition: service_healthy
-              ports:
-                - "5000:5000"
-              volumes:
-                - ./data:/data
-                - ./mlruns:/app/mlruns
-              environment:
-                - MONGO_URI=mongodb://mongodb:27017/
-              networks:
-                - ml-pipeline-network
-          networks:
-            ml-pipeline-network:
-              driver: bridge
-          volumes:
-            mongodb_data:
-          EOF
-          # Run services conditionally
+          # Copy docker-compose.yml and modify based on inputs
+          cp docker-compose.yml docker-compose-ci.yml
           if [ "$SKIP_SCRAPER" = "true" ]; then
-            sed -i "/scraper:/,/^\s*networks:/d" docker-compose-ci.yml
+            yq eval 'del(.services.scraper)' -i docker-compose-ci.yml
           fi
           if [ "$SKIP_STORAGE" = "true" ]; then
-            sed -i "/storage:/,/^\s*networks:/d" docker-compose-ci.yml
+            yq eval 'del(.services.storage)' -i docker-compose-ci.yml
           fi
           cat docker-compose-ci.yml
           docker-compose -f docker-compose-ci.yml up -d
-          sleep 900
-          docker-compose -f docker-compose-ci.yml logs -t
+          # Wait for services to complete
+          timeout 600 docker-compose -f docker-compose-ci.yml logs --tail=100 -f || true
           docker-compose -f docker-compose-ci.yml down
 
       - name: 🕵️ Debug MongoDB Contents
+        if: ${{ github.event.inputs.skip_storage != 'true' }}
         run: |
           python -c "
           from pymongo import MongoClient
@@ -195,6 +115,7 @@ jobs:
           "
 
       - name: 📊 Validate pipeline outputs
+        if: ${{ github.event.inputs.skip_scraper != 'true' }}
         run: |
           if [ -f data/unified_extracted_products.csv ]; then
             echo "✅ Data CSV found:"
@@ -226,14 +147,15 @@ jobs:
           "
 
       - name: 🧪 Test API endpoints
+        if: ${{ github.event.inputs.skip_storage != 'true' }}
         run: |
           curl -f http://localhost:5000/health || { echo "❌ API health check failed"; exit 1; }
           curl -f http://localhost:5000/api/database-stats || { echo "❌ API database-stats failed"; exit 1; }
           curl -f -X POST http://localhost:5000/api/top-k-products -H "Content-Type: application/json" -d '{"k": 5, "criteria": "price"}' || { echo "❌ API top-k-products failed"; exit 1; }
 
       - name: 📦 Upload Artifacts
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: logs-and-data
           path: |

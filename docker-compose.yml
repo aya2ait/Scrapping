@@ -1,17 +1,21 @@
+version: '3.8'
+
 services:
   mongodb:
     image: mongo:5.0
     ports:
       - "27017:27017"
     volumes:
-      - scrapping_mongodb_data:/data/db
+      - mongodb_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - ml-pipeline-network
+
   scraper:
     image: safaehm/ecommerce-scraper:latest
     volumes:
@@ -19,34 +23,43 @@ services:
       - ./logs:/app/logs
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
-    command: ["sh", "-c", "python3 pipeline.py && touch /data/scraper_done && ls -l /data && tail -f /app/logs/unified_extraction_pipeline.log"]
+    command: ["sh", "-c", "python3 pipeline.py && touch /data/scraper_done"]
     healthcheck:
       test: ["CMD", "test", "-f", "/data/scraper_done"]
       interval: 10s
       timeout: 5s
       retries: 120
-    networks:
-      - ml-pipeline-network
-  storage:
-    image: safaehm/ecommerce-storage:latest
+      start_period: 30s
     depends_on:
       mongodb:
         condition: service_healthy
-      scraper:
-        condition: service_healthy
+    networks:
+      - ml-pipeline-network
+
+  storage:
+    image: safaehm/ecommerce-storage:latest
     volumes:
       - ./data:/data
       - ./logs:/app/logs
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
-    command: ["sh", "-c", "sleep 10 && ls -l /data && python mongo.py /data/unified_extracted_products.csv"]
+    command: ["sh", "-c", "python mongo.py /data/unified_extracted_products.csv >> /app/logs/storage.log 2>&1 && touch /data/storage_done"]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/storage_done"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      scraper:
+        condition: service_healthy
     networks:
       - ml-pipeline-network
+
   api:
     image: safaehm/ecommerce-api:latest
-    depends_on:
-      storage:
-        condition: service_started
     ports:
       - "5000:5000"
     volumes:
@@ -54,10 +67,21 @@ services:
       - ./mlruns:/app/mlruns
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      storage:
+        condition: service_healthy
     networks:
       - ml-pipeline-network
+
 networks:
   ml-pipeline-network:
     driver: bridge
+
 volumes:
-  scrapping_mongodb_data:
+  mongodb_data:
