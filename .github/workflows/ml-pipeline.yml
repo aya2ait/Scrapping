@@ -33,6 +33,7 @@ jobs:
     timeout-minutes: 60
     env:
       MONGODB_VERSION: '5.0'
+      MONGODB_PORT: 27017
 
     services:
       mongodb:
@@ -104,46 +105,31 @@ jobs:
           # Create docker-compose-ci.yml
           cat > docker-compose-ci.yml << EOF
           services:
-            mongodb:
-              image: mongo:${{ env.MONGODB_VERSION }}
-              ports:
-                - 27017:27017
-              volumes:
-                - mongodb_data:/data/db
-              healthcheck:
-                test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-                interval: 10s
-                timeout: 5s
-                retries: 5
-              networks:
-                - ml-pipeline-network
+            # Use the GitHub Actions MongoDB service instead of running our own
             scraper:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-scraper:latest
               volumes:
                 - ./data:/data
                 - ./logs:/app/logs
               environment:
-                - MONGO_URI=mongodb://mongodb:27017/
+                - MONGO_URI=mongodb://localhost:27017/
               command: ["sh", "-c", "python3 pipeline.py && touch /data/scraper_done && ls -l /data && tail -f /app/logs/unified_extraction_pipeline.log"]
               healthcheck:
                 test: ["CMD", "test", "-f", "/data/scraper_done"]
                 interval: 10s
                 timeout: 5s
                 retries: 180
-              networks:
-                - ml-pipeline-network
+              network_mode: "host"
             storage:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
               depends_on:
-                mongodb:
-                  condition: service_healthy
                 scraper:
                   condition: service_healthy
               volumes:
                 - ./data:/data
                 - ./logs:/app/logs
               environment:
-                - MONGO_URI=mongodb://mongodb:27017/
+                - MONGO_URI=mongodb://localhost:27017/
                 - MONGODB_DATABASE=products_db
                 - MONGODB_COLLECTION=products
               command: ["sh", "-c", "ls -l /data && python mongo.py /data/unified_extracted_products.csv >> /app/logs/storage.log 2>&1 && touch /data/storage_done && sleep infinity || echo 'mongo.py failed' >> /app/logs/storage.log"]
@@ -152,8 +138,7 @@ jobs:
                 interval: 10s
                 timeout: 5s
                 retries: 60
-              networks:
-                - ml-pipeline-network
+              network_mode: "host"
             api:
               image: ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest
               depends_on:
@@ -165,23 +150,17 @@ jobs:
                 - ./data:/data
                 - ./mlruns:/app/mlruns
               environment:
-                - MONGO_URI=mongodb://mongodb:27017/
+                - MONGO_URI=mongodb://localhost:27017/
                 - MONGODB_DATABASE=products_db
                 - MONGODB_COLLECTION=products
-              networks:
-                - ml-pipeline-network
-          networks:
-            ml-pipeline-network:
-              driver: bridge
-          volumes:
-            mongodb_data:
+              network_mode: "host"
           EOF
           # Run services conditionally
           if [ "$SKIP_SCRAPER" = "true" ]; then
-            sed -i "/scraper:/,/^\s*networks:/d" docker-compose-ci.yml
+            sed -i "/scraper:/,/^\s*network_mode:/d" docker-compose-ci.yml
           fi
           if [ "$SKIP_STORAGE" = "true" ]; then
-            sed -i "/storage:/,/^\s*networks:/d" docker-compose-ci.yml
+            sed -i "/storage:/,/^\s*network_mode:/d" docker-compose-ci.yml
           fi
           cat docker-compose-ci.yml
           docker-compose -f docker-compose-ci.yml up -d
