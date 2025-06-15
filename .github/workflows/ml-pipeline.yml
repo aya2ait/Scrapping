@@ -37,11 +37,16 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: 📦 Install Docker Compose
+      - name: 📦 Install Docker Compose and yq
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
+          sudo apt-get update
+          sudo apt-get install -y jq
+          sudo curl -L https://github.com/mikefarah/yq/releases/download/v4.35.1/yq_linux_amd64 -o /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
 
       - name: 🔧 Install Python dependencies for testing
         run: |
@@ -68,17 +73,7 @@ jobs:
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-storage:latest
           docker push ${{ env.DOCKERHUB_USERNAME }}/ecommerce-api:latest
 
-      - name: 🔗 Verify MongoDB connection
-        run: |
-          timeout 30 bash -c 'until nc -z localhost 27017; do sleep 1; done'
-          python -c "
-          from pymongo import MongoClient
-          client = MongoClient('mongodb://localhost:27017/')
-          client.admin.command('ping')
-          print('✅ MongoDB is up!')
-          "
-
-      - name: 🚀 Run Pipeline with Docker Compose
+      - name: 🚀 Start MongoDB with Docker Compose
         env:
           SKIP_SCRAPER: ${{ github.event.inputs.skip_scraper || 'false' }}
           SKIP_STORAGE: ${{ github.event.inputs.skip_storage || 'false' }}
@@ -92,14 +87,29 @@ jobs:
             yq eval 'del(.services.storage)' -i docker-compose-ci.yml
           fi
           cat docker-compose-ci.yml
+          # Start only MongoDB
+          docker-compose -f docker-compose-ci.yml up -d mongodb
+          # Wait for MongoDB to be healthy
+          timeout 60 bash -c 'until docker-compose -f docker-compose-ci.yml ps mongodb | grep "healthy"; do sleep 1; done' || { echo "❌ MongoDB failed to start"; exit 1; }
+          # Verify MongoDB connection
+          docker-compose -f docker-compose-ci.yml exec -T mongodb mongosh --eval 'db.adminCommand("ping")' || { echo "❌ MongoDB ping failed"; exit 1; }
+          echo "✅ MongoDB is up!"
+
+      - name: 🚀 Run Remaining Pipeline Services
+        env:
+          SKIP_SCRAPER: ${{ github.event.inputs.skip_scraper || 'false' }}
+          SKIP_STORAGE: ${{ github.event.inputs.skip_storage || 'false' }}
+        run: |
+          # Start remaining services
           docker-compose -f docker-compose-ci.yml up -d
-          # Wait for services to complete
+          # Wait for services to complete (max 10 minutes)
           timeout 600 docker-compose -f docker-compose-ci.yml logs --tail=100 -f || true
           docker-compose -f docker-compose-ci.yml down
 
       - name: 🕵️ Debug MongoDB Contents
         if: ${{ github.event.inputs.skip_storage != 'true' }}
         run: |
+          docker-compose -f docker-compose-ci.yml up -d mongodb
           python -c "
           from pymongo import MongoClient
           client = MongoClient('mongodb://localhost:27017/')
@@ -113,6 +123,7 @@ jobs:
               print('No products found')
               exit(1)
           "
+          docker-compose -f docker-compose-ci.yml down
 
       - name: 📊 Validate pipeline outputs
         if: ${{ github.event.inputs.skip_scraper != 'true' }}
@@ -136,6 +147,7 @@ jobs:
       - name: 🧪 Test MongoDB data storage
         if: ${{ github.event.inputs.skip_storage != 'true' }}
         run: |
+          docker-compose -f docker-compose-ci.yml up -d mongodb
           python -c "
           from pymongo import MongoClient
           client = MongoClient('mongodb://localhost:27017/')
@@ -145,13 +157,16 @@ jobs:
               print(f'❌ Expected ~38503 products in MongoDB, got {count}')
               exit(1)
           "
+          docker-compose -f docker-compose-ci.yml down
 
       - name: 🧪 Test API endpoints
         if: ${{ github.event.inputs.skip_storage != 'true' }}
         run: |
-          curl -f http://localhost:5000/health || { echo "❌ API health check failed"; exit 1; }
+          docker-compose -f docker-compose-ci.yml up -d
+          timeout 60 bash -c 'until curl -f http://localhost:5000/health; do sleep 1; done' || { echo "❌ API health check failed"; exit 1; }
           curl -f http://localhost:5000/api/database-stats || { echo "❌ API database-stats failed"; exit 1; }
           curl -f -X POST http://localhost:5000/api/top-k-products -H "Content-Type: application/json" -d '{"k": 5, "criteria": "price"}' || { echo "❌ API top-k-products failed"; exit 1; }
+          docker-compose -f docker-compose-ci.yml down
 
       - name: 📦 Upload Artifacts
         if: always()
