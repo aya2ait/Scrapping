@@ -235,7 +235,7 @@ jobs:
                       sample = db['products'].find_one()
                       print(f'Sample document: {sample}')
                   else:
-                      print('No products found in collection')
+                      print('No products found in the collection')
               else:
                   print('Products collection not found')
           else:
